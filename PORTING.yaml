@@ -1,0 +1,7 @@
+schemaVersion: harness.planeon.ai/porting-ledger/v1alpha1
+repository: mas-harness-control-plane
+status: NO_AUTHORIZATION
+authorizationId: null
+mappings: []
+copiedFiles: []
+appliedPorts: []

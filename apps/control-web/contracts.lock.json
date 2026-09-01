@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "planeon.control.predecessor-lock/v1",
+  "sdk002": {
+    "commit": "92a8ebf8e705eb2bf7a4e5be89edc5e8aa062c08",
+    "typescriptAttributesSha256": "922ed63c42c742cfc01ad61f880862b8a9312a1a3a647698995a6d426cc15a5c",
+    "typescriptContextSha256": "526c851a8a598d1d49b47da4b0fc588c24dcdef974b76b7b21ec4d747ead7ae1",
+    "typescriptDecoratorsSha256": "5f8d92fa84b8ad8c48f3319578ebb0f3f8b5abe9a33c86d86acd48a649f8f06d",
+    "typescriptPackageSha256": "c74a05bb7e25f02b47ab24be5c215d1431947dbf882741ec4797141da9e494c0"
+  },
+  "ind001": {
+    "commit": "a626437a18cd27d75cb96e0d846f56a235313c98",
+    "commonContractsLockSha256": "81d7470e28b452cbf8de2e4903b47b5335709b09cf6375f78481057973d75c91",
+    "commonJourneySha256": "950a6d21c68a35117a3cd36d67491cde85274ef911d78ff8585e1be8671db2fb",
+    "commonPackSha256": "534246425cdf38fd4f311da1e4a587eadbffdb589d747435a081ed969ae978e9"
+  },
+  "met003": {
+    "commit": "97da35afff79e1582b964b613472609a613ea81b",
+    "policySha256": "77c1385d014db8562be215f03a806deafb66e38c6e7faed9167f53299dadd43e",
+    "scannerSha256": "57fa7e94bf5657f0daf959d5229dfc2a53a0ab94793d1d5fa03a7513b1272fd7",
+    "workflowSha256": "b6b8c87fc5f9615c193594c7a861a59e55022acfdb1dc9970c903af9fca22dee"
+  }
+}
