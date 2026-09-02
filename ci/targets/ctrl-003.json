@@ -1,0 +1,21 @@
+{
+  "packetId": "CTRL-003",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/demands/contracts.test.ts", "tests/demands/migration.test.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ],
+      "name": "demand-contract"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "tests/demands/approval.test.ts", "tests/demands/http.test.ts", "tests/demands/ui.test.ts", "e2e/demand-approval.spec.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ],
+      "name": "demand-approval-e2e"
+    }
+  ]
+}
