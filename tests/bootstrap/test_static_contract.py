@@ -5,6 +5,8 @@ import re
 import unittest
 from pathlib import Path
 
+from ci.handlers.prefetch import BASE, dependency_errors, history_errors
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -62,6 +64,61 @@ class StaticContractTests(unittest.TestCase):
         config = (ROOT / "apps/control-web/next.config.ts").read_text(encoding="utf-8")
         self.assertLess(handler.index('run("npm", "run", "typecheck")'), handler.index('run("npm", "run", "build")'))
         self.assertIn("ignoreBuildErrors: true", config)
+
+    def test_prefetch_uses_exact_root_ancestry_without_one_commit_limit(self) -> None:
+        handler = (ROOT / "ci/handlers/prefetch.py").read_text(encoding="utf-8")
+        self.assertNotIn('"HEAD^1"', handler)
+        for required in (
+            '"--is-shallow-repository"',
+            '"rev-list", "--max-parents=0", "HEAD"',
+            '"merge-base", "--is-ancestor", BASE, "HEAD"',
+            '"refs/replace"',
+            '"info/grafts"',
+        ):
+            self.assertIn(required, handler)
+        self.assertEqual(
+            history_errors(
+                head="descendant",
+                shallow="false",
+                roots=[BASE],
+                base_exists=True,
+                base_is_ancestor=True,
+                replace_refs=[],
+                graft_path_exists=False,
+            ),
+            [],
+        )
+        negative_facts = {
+            "shallow": {"shallow": "true"},
+            "root": {"roots": ["0" * 40]},
+            "missing": {"base_exists": False},
+            "ancestor": {"base_is_ancestor": False},
+            "replace": {"replace_refs": ["refs/replace/unsafe"]},
+            "graft": {"graft_path_exists": True},
+        }
+        baseline = {
+            "head": "descendant",
+            "shallow": "false",
+            "roots": [BASE],
+            "base_exists": True,
+            "base_is_ancestor": True,
+            "replace_refs": [],
+            "graft_path_exists": False,
+        }
+        for name, changed in negative_facts.items():
+            with self.subTest(name=name):
+                self.assertTrue(history_errors(**{**baseline, **changed}))
+
+    def test_prefetch_preserves_bootstrap_pins_and_allows_exact_additions(self) -> None:
+        manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+        lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))
+        manifest["dependencies"]["yaml"] = "2.9.0"
+        lock["packages"][""]["dependencies"]["yaml"] = "2.9.0"
+        self.assertEqual(dependency_errors(manifest, lock), [])
+
+        manifest["dependencies"]["react"] = "^19.2.0"
+        lock["packages"][""]["dependencies"]["react"] = "^19.2.0"
+        self.assertTrue(dependency_errors(manifest, lock))
 
 
 if __name__ == "__main__":

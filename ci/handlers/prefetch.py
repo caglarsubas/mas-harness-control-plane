@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tomllib
@@ -49,6 +50,9 @@ EXPECTED_LOCK = {
         "workflowSha256": "b6b8c87fc5f9615c193594c7a861a59e55022acfdb1dc9970c903af9fca22dee",
     },
 }
+EXACT_NPM_VERSION = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?$"
+)
 
 
 def require(condition: bool, message: str) -> None:
@@ -66,6 +70,69 @@ def version(*argv: str) -> str:
     return result.stdout.strip()
 
 
+def history_errors(
+    *,
+    head: str,
+    shallow: str,
+    roots: list[str],
+    base_exists: bool,
+    base_is_ancestor: bool,
+    replace_refs: list[str],
+    graft_path_exists: bool,
+) -> list[str]:
+    errors: list[str] = []
+    if shallow != "false":
+        errors.append("full non-shallow repository history is required")
+    if not base_exists:
+        errors.append("exact empty root commit is unavailable")
+    if roots != [BASE]:
+        errors.append("repository history does not have the one exact empty root")
+    if head != BASE and not base_is_ancestor:
+        errors.append("HEAD is not descended from the exact empty root")
+    if replace_refs:
+        errors.append("Git replace authority is forbidden")
+    if graft_path_exists:
+        errors.append("Git graft authority is forbidden")
+    return errors
+
+
+def dependency_errors(manifest: object, lock: object) -> list[str]:
+    if not isinstance(manifest, dict):
+        return ["package manifest must be an object"]
+    runtime = manifest.get("dependencies")
+    development = manifest.get("devDependencies")
+    if not isinstance(runtime, dict) or not isinstance(development, dict):
+        return ["package dependency maps must be objects"]
+    errors: list[str] = []
+    for name, expected in EXPECTED_DEPENDENCIES.items():
+        if runtime.get(name) != expected:
+            errors.append(f"bootstrap runtime dependency drift: {name}")
+    for name, expected in EXPECTED_DEV_DEPENDENCIES.items():
+        if development.get(name) != expected:
+            errors.append(f"bootstrap development dependency drift: {name}")
+    overlap = sorted(set(runtime) & set(development))
+    if overlap:
+        errors.append(f"dependency appears in runtime and development maps: {overlap[0]}")
+    for name, value in sorted({**runtime, **development}.items()):
+        if not isinstance(value, str) or EXACT_NPM_VERSION.fullmatch(value) is None:
+            errors.append(f"direct dependency is not an exact npm version: {name}")
+    if not isinstance(lock, dict):
+        errors.append("package lock must be an object")
+        return errors
+    packages = lock.get("packages")
+    root_lock = packages.get("") if isinstance(packages, dict) else None
+    if not isinstance(root_lock, dict):
+        errors.append("package-lock root is missing")
+        return errors
+    if root_lock.get("dependencies") != runtime:
+        errors.append("package-lock runtime roots drift from package.json")
+    if root_lock.get("devDependencies") != development:
+        errors.append("package-lock development roots drift from package.json")
+    if lock.get("lockfileVersion") != 3:
+        errors.append("package-lock v3 is required")
+    return errors
+
+
 def main() -> None:
     require("HARNESS_TASK_PACKET" not in os.environ, "packet path leaked to prefetch child")
     require("HARNESS_WARM_SOURCE_ROOTS" not in os.environ, "warm-source roots leaked to prefetch child")
@@ -77,20 +144,27 @@ def main() -> None:
     require(os.environ.get("NEXT_TELEMETRY_DISABLED") == "1", "Next telemetry must be disabled")
 
     head = version("git", "rev-parse", "HEAD")
-    require(command("git", "cat-file", "-e", f"{BASE}^{{commit}}").returncode == 0, "empty base commit is unavailable")
-    if head != BASE:
-        require(version("git", "rev-parse", "HEAD^1") == BASE, "implementation first parent is not the exact empty base")
+    graft_value = version("git", "rev-parse", "--git-path", "info/grafts")
+    graft_path = Path(graft_value)
+    if not graft_path.is_absolute():
+        graft_path = ROOT / graft_path
+    lineage_errors = history_errors(
+        head=head,
+        shallow=version("git", "rev-parse", "--is-shallow-repository"),
+        roots=version("git", "rev-list", "--max-parents=0", "HEAD").splitlines(),
+        base_exists=command("git", "cat-file", "-e", f"{BASE}^{{commit}}").returncode == 0,
+        base_is_ancestor=command("git", "merge-base", "--is-ancestor", BASE, "HEAD").returncode == 0,
+        replace_refs=version("git", "for-each-ref", "--format=%(refname)", "refs/replace").splitlines(),
+        graft_path_exists=graft_path.exists() or graft_path.is_symlink(),
+    )
+    require(not lineage_errors, lineage_errors[0] if lineage_errors else "repository lineage invalid")
 
     manifest = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     require(manifest["engines"] == {"node": "24.20.0", "npm": "11.11.0"}, "Node/npm engine lock drift")
     require(manifest["packageManager"] == "npm@11.11.0", "packageManager lock drift")
-    require(manifest["dependencies"] == EXPECTED_DEPENDENCIES, "runtime dependency lock drift")
-    require(manifest["devDependencies"] == EXPECTED_DEV_DEPENDENCIES, "development dependency lock drift")
     lock = json.loads((ROOT / "package-lock.json").read_text(encoding="utf-8"))
-    root_lock = lock["packages"][""]
-    require(root_lock["dependencies"] == EXPECTED_DEPENDENCIES, "package-lock runtime roots drift")
-    require(root_lock["devDependencies"] == EXPECTED_DEV_DEPENDENCIES, "package-lock development roots drift")
-    require(lock["lockfileVersion"] == 3, "package-lock v3 is required")
+    package_errors = dependency_errors(manifest, lock)
+    require(not package_errors, package_errors[0] if package_errors else "dependency contract invalid")
 
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     require(project["project"]["requires-python"] == "==3.12.*", "Python contract drift")
@@ -115,7 +189,7 @@ def main() -> None:
         print(install.stdout, file=sys.stderr)
         print(install.stderr, file=sys.stderr)
         raise SystemExit("prefetch refused: offline npm closure is unavailable")
-    print("prefetch passed: exact empty base, predecessor locks, toolchains, one-package worker, and offline npm closure are present")
+    print("prefetch passed: exact empty root ancestry, bootstrap pins, predecessor locks, toolchains, one-package worker, and offline npm closure are present")
 
 
 if __name__ == "__main__":
