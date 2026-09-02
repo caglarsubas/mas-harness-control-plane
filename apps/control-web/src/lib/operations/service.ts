@@ -11,6 +11,7 @@ import type {
   OperationFailure,
   OperationResource,
   OperationState,
+  OperationType,
   QueuedCompilationJob,
   ResolvedCompileInput,
 } from "./contracts";
@@ -27,10 +28,11 @@ interface OperationRow {
   readonly organizationId: string;
   readonly state: OperationState;
   readonly revision: number;
-  readonly demandId: string;
-  readonly demandRevision: number;
-  readonly demandDigest: string;
-  readonly actorDigest: string;
+  readonly operationType: OperationType;
+  readonly subject: ResourceRef;
+  readonly actor: { readonly type: "HUMAN" | "WORKLOAD"; readonly id: string };
+  readonly eventActorId: string;
+  readonly eventSource: string;
   readonly idempotencyKeyDigest: string;
   readonly correlationId: string;
   readonly requestedAt: string;
@@ -105,10 +107,10 @@ function resource(row: OperationRow): OperationResource {
     metadata: Object.freeze({ id: row.id, version: `0.1.${row.revision - 1}` }),
     spec: Object.freeze({
       organizationId: tenantId(row.organizationId),
-      operationType: "COMPILE_PROFILE",
+      operationType: row.operationType,
       state: row.state,
-      subject: Object.freeze({ kind: "tenant-demand", id: `demand.${row.demandId.replaceAll("-", "")}`, digest: row.demandDigest }),
-      actor: Object.freeze({ type: "HUMAN", id: actorId(row.actorDigest) }),
+      subject: Object.freeze({ ...row.subject }),
+      actor: Object.freeze({ ...row.actor }),
       idempotencyKeyDigest: row.idempotencyKeyDigest,
       requestedAt: row.requestedAt,
       updatedAt: row.updatedAt,
@@ -132,7 +134,7 @@ function event(row: OperationRow, previous: OperationState, reasonCode: string):
   return Object.freeze({
     specversion: "1.0",
     id: randomUUID(),
-    source: "urn:planeon:harness:control.profile-compiler",
+    source: row.eventSource,
     type: "harness.operation.state.changed.v1",
     subject: row.id,
     time: row.updatedAt,
@@ -146,7 +148,7 @@ function event(row: OperationRow, previous: OperationState, reasonCode: string):
       aggregateKind: "Operation",
       aggregateId: row.id,
       aggregateVersion: row.revision,
-      actor: Object.freeze({ type: "WORKLOAD", id: "worker.profile-compiler" }),
+      actor: Object.freeze({ type: "WORKLOAD", id: row.eventActorId }),
       correlationId: row.correlationId,
       causationId: null,
       reasonCode,
@@ -209,10 +211,11 @@ export class OperationStore {
       organizationId: context.organizationId,
       state: "PENDING",
       revision: 1,
-      demandId: demand.id,
-      demandRevision: demand.revision,
-      demandDigest: demand.digest,
-      actorDigest: context.subjectDigest,
+      operationType: "COMPILE_PROFILE",
+      subject: Object.freeze({ kind: "tenant-demand", id: `demand.${demand.id.replaceAll("-", "")}`, digest: demand.digest }),
+      actor: Object.freeze({ type: "HUMAN", id: actorId(context.subjectDigest) }),
+      eventActorId: "worker.profile-compiler",
+      eventSource: "urn:planeon:harness:control.profile-compiler",
       idempotencyKeyDigest: sha256(idempotencyKey),
       correlationId: randomUUID(),
       requestedAt: now,
@@ -268,6 +271,90 @@ export class OperationStore {
     return response(row, 200);
   }
 
+  createBundleOperation(
+    context: TenantContext,
+    profileLockRef: ResourceRef,
+    idempotencyKeyDigest: string,
+    correlationId: string,
+    nowEpoch: number,
+  ): OperationResource {
+    assertContext(context);
+    if (!STABLE_ID.test(profileLockRef.kind) || !STABLE_ID.test(profileLockRef.id) || !SHA256.test(profileLockRef.digest)) {
+      throw new ControlError("OPERATION_SUBJECT_REFUSED", 422);
+    }
+    if (!SHA256.test(idempotencyKeyDigest) || !UUID.test(correlationId)) {
+      throw new ControlError("OPERATION_BINDING_REFUSED", 422);
+    }
+    const now = timestamp(nowEpoch);
+    const row: OperationRow = Object.freeze({
+      id: `operation.${randomUUID().replaceAll("-", "")}`,
+      organizationId: context.organizationId,
+      state: "PENDING",
+      revision: 1,
+      operationType: "BUILD_BUNDLE",
+      subject: Object.freeze({ ...profileLockRef }),
+      actor: Object.freeze({ type: "HUMAN", id: actorId(context.subjectDigest) }),
+      eventActorId: "worker.bundle-distribution",
+      eventSource: "urn:planeon:harness:control.bundle-distribution",
+      idempotencyKeyDigest,
+      correlationId,
+      requestedAt: now,
+      updatedAt: now,
+      resultRefs: Object.freeze([]),
+      failure: null,
+    });
+    const audit: OperationAuditEvent = Object.freeze({
+      eventId: randomUUID(), organizationId: context.organizationId,
+      eventType: "bundle.operation.requested.v1", aggregateId: row.id,
+      aggregateDigest: sha256(canonicalJson(resource(row))), actorDigest: context.subjectDigest, occurredAt: now,
+    });
+    if (this.failAudit) {
+      this.failAudit = false;
+      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
+    }
+    this.operations.set(`${context.organizationId}:${row.id}`, row);
+    this.audit.push(audit);
+    return resource(row);
+  }
+
+  completeBundleOperation(
+    organizationId: string,
+    operationId: string,
+    releaseRef: ResourceRef,
+    nowEpoch: number,
+  ): OperationResource {
+    const key = `${organizationId}:${operationId}`;
+    const current = this.operations.get(key);
+    if (!current || current.operationType !== "BUILD_BUNDLE" || current.state !== "PENDING") {
+      throw new ControlError("OPERATION_TRANSITION_REFUSED", 409);
+    }
+    if (!STABLE_ID.test(releaseRef.kind) || !STABLE_ID.test(releaseRef.id) || !SHA256.test(releaseRef.digest)) {
+      throw new ControlError("OPERATION_RESULT_REFUSED", 422);
+    }
+    const changedAt = timestamp(nowEpoch);
+    const running: OperationRow = Object.freeze({ ...current, state: "RUNNING", revision: current.revision + 1, updatedAt: changedAt });
+    const succeeded: OperationRow = Object.freeze({
+      ...running,
+      state: "SUCCEEDED",
+      revision: running.revision + 1,
+      resultRefs: Object.freeze([Object.freeze({ ...releaseRef })]),
+    });
+    const emitted = [event(running, "PENDING", "BUNDLE_SOURCE_PROCESSING"), event(succeeded, "RUNNING", "BUNDLE_SOURCE_REPORTED_SIGNED")];
+    const audits = [running, succeeded].map((row) => Object.freeze({
+      eventId: randomUUID(), organizationId, eventType: "harness.operation.state.changed.v1",
+      aggregateId: operationId, aggregateDigest: sha256(canonicalJson(resource(row))),
+      actorDigest: sha256("worker.bundle-distribution"), occurredAt: changedAt,
+    }));
+    if (this.failAudit) {
+      this.failAudit = false;
+      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
+    }
+    this.operations.set(key, succeeded);
+    this.outbox.push(...emitted);
+    this.audit.push(...audits);
+    return resource(succeeded);
+  }
+
   applyWorkerTransition(
     organizationId: string,
     operationId: string,
@@ -300,7 +387,7 @@ export class OperationStore {
     const audit: OperationAuditEvent = Object.freeze({
       eventId: randomUUID(), organizationId, eventType: "harness.operation.state.changed.v1",
       aggregateId: operationId, aggregateDigest: sha256(canonicalJson(resource(changed))),
-      actorDigest: sha256("worker.profile-compiler"), occurredAt: changed.updatedAt,
+      actorDigest: sha256(current.eventActorId), occurredAt: changed.updatedAt,
     });
     if (this.failAudit) {
       this.failAudit = false;
