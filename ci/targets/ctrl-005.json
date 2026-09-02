@@ -1,0 +1,21 @@
+{
+  "packetId": "CTRL-005",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "tests/profiles/contract.test.ts", "tests/profiles/http.test.ts", "tests/profiles/ui.test.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ],
+      "name": "profile-contract"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/profiles/lifecycle.test.ts", "tests/profiles/migration.test.ts", "e2e/profile-lock.spec.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ],
+      "name": "profile-lock-e2e"
+    }
+  ]
+}

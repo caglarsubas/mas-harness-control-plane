@@ -15,6 +15,7 @@ export const COMPILER_AUTHORITY = Object.freeze({
 });
 
 export type OperationState = "PENDING" | "RUNNING" | "CANCELLING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+export type OperationType = "COMPILE_PROFILE" | "BUILD_BUNDLE";
 
 export interface OperationFailure {
   readonly reasonCode: string;
@@ -31,11 +32,11 @@ export interface OperationResource {
   };
   readonly spec: {
     readonly organizationId: string;
-    readonly operationType: "COMPILE_PROFILE";
+    readonly operationType: OperationType;
     readonly state: OperationState;
     readonly subject: ResourceRef;
     readonly actor: {
-      readonly type: "HUMAN";
+      readonly type: "HUMAN" | "WORKLOAD";
       readonly id: string;
     };
     readonly idempotencyKeyDigest: string;
@@ -112,7 +113,7 @@ export interface OperationAuditEvent {
 export interface HarnessOperationEvent {
   readonly specversion: "1.0";
   readonly id: string;
-  readonly source: "urn:planeon:harness:control.profile-compiler";
+  readonly source: string;
   readonly type: "harness.operation.state.changed.v1";
   readonly subject: string;
   readonly time: string;
@@ -126,7 +127,7 @@ export interface HarnessOperationEvent {
     readonly aggregateKind: "Operation";
     readonly aggregateId: string;
     readonly aggregateVersion: number;
-    readonly actor: { readonly type: "WORKLOAD"; readonly id: "worker.profile-compiler" };
+    readonly actor: { readonly type: "WORKLOAD"; readonly id: string };
     readonly correlationId: string;
     readonly causationId: string | null;
     readonly reasonCode: string;
