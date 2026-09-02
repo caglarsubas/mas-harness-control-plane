@@ -1,0 +1,23 @@
+{
+  "packetId": "CTRL-004",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "e2e/compiler-operation.spec.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["python", "-m", "unittest", "discover", "-s", "tests/compiler-worker", "-p", "test_contract.py"]
+      ],
+      "name": "compiler-worker-contract"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["python", "-m", "unittest", "discover", "-s", "tests/compiler-worker", "-p", "test_crash_matrix.py"],
+        ["python", "-m", "unittest", "discover", "-s", "tests/compiler-worker", "-p", "test_migration.py"]
+      ],
+      "name": "compiler-crash-matrix"
+    }
+  ]
+}

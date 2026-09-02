@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""Inert CTRL-001 profile compiler worker.
-
-The bootstrap worker has no listener, queue, database adapter, retry loop, sleep,
-network client, subprocess, or compiler. CTRL-004 owns those behaviors.
-"""
+"""No-listener CTRL-004 profile compiler worker entry point."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Sequence
 
-SCHEMA_VERSION = "planeon.control.foundation/v1"
+WORKER_ROOT = Path(__file__).resolve().parent
+if str(WORKER_ROOT) not in sys.path:
+    sys.path.insert(0, str(WORKER_ROOT))
+
+from profile_compiler.compiler_adapter import DependencyLockError, validate_dependency_lock
+
+SCHEMA_VERSION = "planeon.control.compiler-worker/v1alpha1"
 STATES = ("READY", "NOT_READY")
 
 
@@ -72,8 +76,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     dependencies = WorkerDependencies(args.contracts_state, args.store_state)
     if args.health_check:
-        print(json.dumps(health(dependencies), sort_keys=True, separators=(",", ":")))
-        return 0 if dependencies.ready else 3
+        result = health(dependencies)
+        if dependencies.ready:
+            try:
+                validate_dependency_lock(Path(__file__).with_name("dependencies.lock.json"))
+            except DependencyLockError:
+                result = {**result, "state": "NOT_READY", "reasonCode": "DEPENDENCY_LOCK_REFUSED"}
+        print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+        return 0 if result["state"] == "READY" else 3
     try:
         result = run_once(dependencies)
     except RuntimeError:

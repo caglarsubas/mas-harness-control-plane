@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "planeon.control.compiler-dependencies/v1alpha1",
+  "python": {
+    "version": "3.12.14",
+    "uvVersion": "0.12.7"
+  },
+  "contracts": {
+    "repository": "caglarsubas/mas-harness-contracts",
+    "commit": "2146278a95344cd2a8e22596b2f315b46edffc88",
+    "releaseManifestSha256": "c5dd4c39d1c69d07f8d8de3d1a09584bb906172fee2d5ac20ad25ff344b0db79",
+    "wheel": "planeon_harness_contracts-0.1.0-py3-none-any.whl",
+    "wheelSha256": "53500a690c8b7614e0cb6ea1e4d78e0831b94a458523e558fedfeb13428bb97b",
+    "compilerSourceSha256": "0b0960c87bc1214e795144968db3976bd548c80e6002b03bc3f6e292303a764b",
+    "canonicalSourceSha256": "ef551e4c996762770c2547302f4cd4dc61b6695b3f6619de0428e8527612dbdc"
+  },
+  "production": [
+    {
+      "name": "psycopg",
+      "version": "3.3.4",
+      "filename": "psycopg-3.3.4-py3-none-any.whl",
+      "sha256": "b6bbc25ccf05c8fad3b061d9db2ef0909a555171b84b07f29458a447253d679a",
+      "license": "LGPL-3.0-only"
+    },
+    {
+      "name": "typing-extensions",
+      "version": "4.16.0",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "license": "PSF-2.0"
+    }
+  ],
+  "systemBoundary": {
+    "name": "libpq",
+    "custody": "OPERATOR_SUPPLIED_IMAGE_INVENTORY",
+    "required": true
+  },
+  "acceptanceAdapter": {
+    "platform": "macos-arm64-cpython312",
+    "name": "psycopg-binary",
+    "version": "3.3.4",
+    "filename": "psycopg_binary-3.3.4-cp312-cp312-macosx_11_0_arm64.whl",
+    "sha256": "6402a9d8146cf4b3974ded3fd28a971e83dc6a0333eb7822524a3aa20b546578",
+    "license": "LGPL-3.0-only",
+    "distribution": "RUNNER_ONLY_NOT_PRODUCTION_SELECTION"
+  },
+  "network": "DENY_ALL_OUTBOUND",
+  "runtimeDownloads": false
+}
