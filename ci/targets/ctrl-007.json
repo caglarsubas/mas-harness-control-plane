@@ -1,0 +1,37 @@
+{
+  "packetId": "CTRL-007",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "tests/harness-status", "--pool=forks", "--sequence.concurrent=false"]
+      ],
+      "name": "status-contract"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/playwright", "test", "e2e/harness-overview.spec.ts", "--workers=1", "--reporter=line"]
+      ],
+      "name": "overview-e2e"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/harness-status/ui-source.test.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["node_modules/.bin/playwright", "test", "e2e/harness-overview.spec.ts", "--grep", "onion|empty|semantic fallback", "--workers=1", "--reporter=line"]
+      ],
+      "name": "overview-accessibility"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/playwright", "test", "e2e/harness-overview.spec.ts", "--grep", "zero public requests", "--workers=1", "--reporter=line"]
+      ],
+      "name": "zero-public-browser-requests"
+    }
+  ]
+}
+
