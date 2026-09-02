@@ -11,4 +11,3 @@ export default async function PlanePage({ params }: { readonly params: Promise<{
   if (!projection) notFound();
   return <PlaneDetailPage projection={projection} />;
 }
-

@@ -3,4 +3,3 @@ import { StatusLoading } from "../../../components/harness-overview/StatusBounda
 export default function Loading() {
   return <StatusLoading label="Loading the plane projection" />;
 }
-

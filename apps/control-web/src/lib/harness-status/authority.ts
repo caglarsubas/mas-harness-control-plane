@@ -22,4 +22,3 @@ export const STATUS_AUTHORITY = Object.freeze({
     distribution: Object.freeze({ commit: "6ef7273f0674c3d39f2bd5becf084a4fd16c590c", prRun: 33643041456, mainRun: 33643205684 }),
   }),
 });
-

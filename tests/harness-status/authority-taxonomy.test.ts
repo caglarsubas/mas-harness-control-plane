@@ -24,4 +24,3 @@ describe("CTRL-007 authority and taxonomy", () => {
     expect(HARNESS_IDS).toContain("trust.evaluation-assurance");
   });
 });
-

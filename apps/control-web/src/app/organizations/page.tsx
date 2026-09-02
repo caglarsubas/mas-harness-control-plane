@@ -6,4 +6,3 @@ export default function OrganizationsPage() {
   const secondary = createFixtureProjectionSet("org.copper-ridge-labs", "Copper Ridge Materials Lab");
   return <OperatorPortfolio organizations={[primary.overview, secondary.overview]} />;
 }
-

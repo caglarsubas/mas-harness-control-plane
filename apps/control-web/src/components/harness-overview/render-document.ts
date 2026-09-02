@@ -41,4 +41,3 @@ export function renderHarnessOverviewDocument(options: {
   const form=document.querySelector('form');if(form)form.addEventListener('submit',event=>{event.preventDefault();const value=form.elements.state.value;const items=[...document.querySelectorAll('li[data-state]')];items.forEach(item=>item.dataset.hidden=value!=='ALL'&&item.dataset.state!==value?'true':'false');const count=items.filter(item=>item.dataset.hidden!=='true').length;form.querySelector('[role=status]').textContent='Showing '+count+' of 16 harnesses.';location.hash='/overview?state='+encodeURIComponent(value)});
   </script></body></html>`;
 }
-

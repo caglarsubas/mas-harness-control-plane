@@ -45,4 +45,3 @@ describe("closed status aggregation", () => {
     expect(() => validateBinding({ ...binding, sourceCursors: [...binding.sourceCursors].reverse() })).toThrowError("STATUS_CURSOR_ORDER_INVALID");
   });
 });
-

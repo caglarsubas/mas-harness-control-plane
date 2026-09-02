@@ -11,4 +11,3 @@ export default async function HarnessPage({ params }: { readonly params: Promise
   if (!projection) notFound();
   return <HarnessDetailPage projection={projection} />;
 }
-

@@ -70,4 +70,3 @@ export function planeDefinition(id: string): PlaneDefinition | undefined {
 export function harnessDefinition(id: string): HarnessDefinition | undefined {
   return HARNESSES.find((harness) => harness.id === id);
 }
-

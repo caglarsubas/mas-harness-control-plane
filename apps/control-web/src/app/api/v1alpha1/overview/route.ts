@@ -7,4 +7,3 @@ export const runtime = "nodejs";
 export function GET(request: Request): Promise<Response> {
   return getTenantOverview(request, routeHarnessStatusRuntime);
 }
-

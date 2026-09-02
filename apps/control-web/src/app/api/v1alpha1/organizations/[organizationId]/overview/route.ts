@@ -8,4 +8,3 @@ export async function GET(request: Request, context: { readonly params: Promise<
   const { organizationId } = await context.params;
   return getOrganizationOverview(request, routeHarnessStatusRuntime, organizationId);
 }
-

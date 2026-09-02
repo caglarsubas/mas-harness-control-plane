@@ -33,4 +33,3 @@ describe("status projection migration", () => {
     expect("NOT_RUN_ENV_UNAVAILABLE").toBe("NOT_RUN_ENV_UNAVAILABLE");
   });
 });
-

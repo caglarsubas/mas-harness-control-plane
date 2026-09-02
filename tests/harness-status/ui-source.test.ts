@@ -47,4 +47,3 @@ describe("overview source semantics", () => {
     expect(combined).not.toMatch(/analytics|vercel|googleapis|unsplash/iu);
   });
 });
-

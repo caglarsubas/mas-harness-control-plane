@@ -8,4 +8,3 @@ export async function GET(request: Request, context: { readonly params: Promise<
   const { planeId } = await context.params;
   return getTenantPlane(request, routeHarnessStatusRuntime, planeId);
 }
-
