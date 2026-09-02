@@ -36,7 +36,7 @@ const RFC3339 = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$/u;
 const TERMINAL_DEMAND = new Set<DemandState>(["APPROVED", "REJECTED", "SUPERSEDED"]);
 const TERMINAL_APPROVAL = new Set<ApprovalState>(["APPROVED", "REJECTED", "EXPIRED", "CANCELLED"]);
 
-const DEMAND_TRANSITIONS: Readonly<Record<DemandState, readonly DemandState[]>> = Object.freeze({
+const DEMAND_TRANSITIONS = Object.freeze({
   DRAFT: Object.freeze(["BLOCKED", "VALIDATED"]),
   BLOCKED: Object.freeze(["VALIDATED", "SUPERSEDED"]),
   VALIDATED: Object.freeze(["APPROVAL_PENDING", "SUPERSEDED"]),
@@ -44,7 +44,7 @@ const DEMAND_TRANSITIONS: Readonly<Record<DemandState, readonly DemandState[]>> 
   APPROVED: Object.freeze([]),
   REJECTED: Object.freeze([]),
   SUPERSEDED: Object.freeze([]),
-});
+} as const satisfies Readonly<Record<DemandState, readonly DemandState[]>>);
 
 interface DemandRow {
   readonly id: string;
