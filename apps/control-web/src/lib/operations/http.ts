@@ -3,17 +3,12 @@ import { randomUUID } from "node:crypto";
 import { parseJsonNoDuplicates } from "../foundation/canonical";
 import { boundedError, ControlError } from "../foundation/contracts";
 import { rejectCallerIdentity } from "../foundation/session";
+import { assertBrowserMutation, secureJsonResponse } from "../security/http";
 import type { OperationRuntime } from "./runtime";
 import { operationMutationFingerprint } from "./service";
 
-const JSON_HEADERS = Object.freeze({
-  "cache-control": "no-store",
-  "content-type": "application/json; charset=utf-8",
-  "x-content-type-options": "nosniff",
-});
-
 function response(status: number, body: unknown, etag?: string): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...(etag ? { etag } : {}) } });
+  return secureJsonResponse(status, body, etag);
 }
 
 function failure(error: unknown): Response {
@@ -53,6 +48,7 @@ function identityCheck(request: Request, body?: Record<string, unknown>): void {
 
 export async function requestProfileCompilation(request: Request, runtime: OperationRuntime, demandId: string): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await emptyBody(request);
     identityCheck(request, input);
     const context = runtime.authenticator.authenticate(request, true, runtime.nowEpoch());

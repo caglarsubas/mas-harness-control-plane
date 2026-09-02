@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { canonicalJson, sha256 } from "../foundation/canonical";
 import { ControlError, type TenantContext } from "../foundation/contracts";
+import { TenantAuditChain, type AuditChainRecord } from "../security/audit-chain";
 import type {
   AdmittedApprovalPolicy,
   ApprovalDecisionRecord,
@@ -457,6 +458,7 @@ export class DemandApprovalStore {
   constructor(
     private readonly sources: DemandSourceResolver,
     private readonly policy: ApprovalPolicyHook,
+    private readonly auditChain = new TenantAuditChain(),
   ) {}
 
   failNextAuditForTest(): void {
@@ -486,6 +488,7 @@ export class DemandApprovalStore {
       this.auditFailure = false;
       throw new ControlError("AUDIT_APPEND_FAILED", 503);
     }
+    this.auditChain.append(events);
     this.audit.push(...events.map((event) => Object.freeze(event)));
   }
 
@@ -856,6 +859,11 @@ export class DemandApprovalStore {
   approvalAuditEvents(context: TenantContext, id: string): readonly DemandAuditEvent[] {
     this.requireApproval(context, id);
     return Object.freeze(this.audit.filter((event) => event.organizationId === context.organizationId && event.aggregateId === id));
+  }
+
+  auditChainRecords(context: TenantContext): readonly AuditChainRecord[] {
+    assertContext(context, "DEMAND_NOT_FOUND");
+    return this.auditChain.records(context.organizationId);
   }
 
   prerequisiteDecisionRecords(context: TenantContext, id: string): readonly PrerequisiteDecisionRecord[] {

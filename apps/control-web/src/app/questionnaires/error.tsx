@@ -4,7 +4,7 @@ import styles from "./questionnaire.module.css";
 
 export default function QuestionnaireError({ reset }: { readonly reset: () => void }) {
   return (
-    <main className={styles.main}>
+    <main className={styles.main} id="main-content" tabIndex={-1}>
       <section className={styles.error} role="alert">
         <h1>The questionnaire workspace could not be opened.</h1>
         <p>Your saved revisions were not changed.</p>

@@ -76,7 +76,7 @@ export function QuestionnaireCatalogue() {
         <span className={styles.brand}>Planeon · Harness Engineering</span>
         <span className={styles.security}>Local-first · tenant isolated · signed packs only</span>
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="questionnaire-title">
           <div>
             <p className={styles.eyebrow}>Guided enterprise setup</p>

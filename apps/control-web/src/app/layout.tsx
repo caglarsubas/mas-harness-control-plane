@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import "./security.css";
 
 export const metadata = {
   title: "Planeon Harness Control Plane",
@@ -8,7 +9,10 @@ export const metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <a className="skip-link" href="#main-content">Skip to main content</a>
+        {children}
+      </body>
     </html>
   );
 }

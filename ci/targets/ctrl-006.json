@@ -1,0 +1,31 @@
+{
+  "packetId": "CTRL-006",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "tests/questionnaire", "tests/demands", "tests/profiles", "tests/security", "e2e/compiler-operation.spec.ts", "e2e/profile-lock.spec.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["python3", "scripts/audit_dependencies.py"]
+      ],
+      "name": "security"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/questionnaire/ui.test.ts", "tests/demands/ui.test.ts", "tests/profiles/ui.test.ts", "tests/security/accessibility-source.test.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["node_modules/.bin/playwright", "test", "e2e/security/accessibility.spec.ts", "--workers=1", "--reporter=line"]
+      ],
+      "name": "accessibility"
+    },
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/security/white-goods-service.test.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["node_modules/.bin/playwright", "test", "e2e/white-goods.spec.ts", "--workers=1", "--reporter=line"]
+      ],
+      "name": "e2e-white-goods"
+    }
+  ]
+}

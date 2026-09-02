@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { canonicalJson, sha256 } from "../foundation/canonical";
 import { ControlError, type TenantContext } from "../foundation/contracts";
+import { TenantAuditChain, type AuditChainRecord } from "../security/audit-chain";
 import type { DemandProjection, ResourceRef, StoredResponse } from "../demands/contracts";
 import type {
   CompileInputResolver,
@@ -171,10 +172,23 @@ export class OperationStore {
   private readonly outbox: HarnessOperationEvent[] = [];
   private failAudit = false;
 
-  constructor(private readonly demands: DemandReader, private readonly resolver: CompileInputResolver) {}
+  constructor(
+    private readonly demands: DemandReader,
+    private readonly resolver: CompileInputResolver,
+    private readonly auditChain = new TenantAuditChain(),
+  ) {}
 
   failNextAuditForTest(): void {
     this.failAudit = true;
+  }
+
+  private commitAudit(events: readonly OperationAuditEvent[]): void {
+    if (this.failAudit) {
+      this.failAudit = false;
+      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
+    }
+    this.auditChain.append(events);
+    this.audit.push(...events.map((event) => Object.freeze(event)));
   }
 
   requestCompilation(
@@ -252,14 +266,10 @@ export class OperationStore {
       actorDigest: context.subjectDigest,
       occurredAt: now,
     });
-    if (this.failAudit) {
-      this.failAudit = false;
-      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
-    }
+    this.commitAudit([audit]);
     const result = response(row, 202);
     this.operations.set(`${context.organizationId}:${operationId}`, row);
     this.jobs.push(job);
-    this.audit.push(audit);
     this.idempotency.set(idempotencyIdentity, Object.freeze({ fingerprint, response: result }));
     return result;
   }
@@ -308,12 +318,8 @@ export class OperationStore {
       eventType: "bundle.operation.requested.v1", aggregateId: row.id,
       aggregateDigest: sha256(canonicalJson(resource(row))), actorDigest: context.subjectDigest, occurredAt: now,
     });
-    if (this.failAudit) {
-      this.failAudit = false;
-      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
-    }
+    this.commitAudit([audit]);
     this.operations.set(`${context.organizationId}:${row.id}`, row);
-    this.audit.push(audit);
     return resource(row);
   }
 
@@ -345,13 +351,9 @@ export class OperationStore {
       aggregateId: operationId, aggregateDigest: sha256(canonicalJson(resource(row))),
       actorDigest: sha256("worker.bundle-distribution"), occurredAt: changedAt,
     }));
-    if (this.failAudit) {
-      this.failAudit = false;
-      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
-    }
+    this.commitAudit(audits);
     this.operations.set(key, succeeded);
     this.outbox.push(...emitted);
-    this.audit.push(...audits);
     return resource(succeeded);
   }
 
@@ -389,13 +391,9 @@ export class OperationStore {
       aggregateId: operationId, aggregateDigest: sha256(canonicalJson(resource(changed))),
       actorDigest: sha256(current.eventActorId), occurredAt: changed.updatedAt,
     });
-    if (this.failAudit) {
-      this.failAudit = false;
-      throw new ControlError("AUDIT_WRITE_REFUSED", 500);
-    }
+    this.commitAudit([audit]);
     this.operations.set(key, changed);
     this.outbox.push(emitted);
-    this.audit.push(audit);
     return resource(changed);
   }
 
@@ -405,6 +403,10 @@ export class OperationStore {
 
   auditEvents(organizationId: string): readonly OperationAuditEvent[] {
     return Object.freeze(this.audit.filter((item) => item.organizationId === organizationId));
+  }
+
+  auditChainRecords(organizationId: string): readonly AuditChainRecord[] {
+    return this.auditChain.records(organizationId);
   }
 
   outboxEvents(organizationId: string): readonly HarnessOperationEvent[] {

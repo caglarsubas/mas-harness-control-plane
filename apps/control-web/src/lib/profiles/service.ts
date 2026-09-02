@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { canonicalJson, parseJsonNoDuplicates, sha256 } from "../foundation/canonical";
 import { ControlError, type TenantContext } from "../foundation/contracts";
+import { TenantAuditChain, type AuditChainRecord } from "../security/audit-chain";
 import type { ApprovalDecisionRecord, ApprovalState, ResourceRef, StoredResponse } from "../demands/contracts";
 import type { OperationStore } from "../operations/service";
 import type {
@@ -346,6 +347,7 @@ export class ProfileLifecycleStore {
     private readonly policy: ProfileApprovalPolicyHook,
     private readonly operations: OperationStore,
     private readonly allowedDistributionSources: ReadonlySet<string> = new Set(),
+    private readonly auditChain = new TenantAuditChain(),
   ) {}
 
   registerCompiledProfile(registration: CompiledProfileRegistration): ProfileProjection {
@@ -474,10 +476,9 @@ export class ProfileLifecycleStore {
     const response = approvalResponse(approval, 202);
     const audit = this.auditRecord(context.organizationId, "profile.approval.requested.v1", approval.id, response.body.digest, context.subjectDigest, now);
     const outbox = this.outboxRecord(context.organizationId, "approval.requested.v1", approval.id, response.body.digest, now);
-    this.requireAudit();
+    this.commitAudit([audit]);
     this.approvals.set(`${context.organizationId}:${approval.id}`, approval);
     this.profiles.set(`${context.organizationId}:${profileId}`, changed);
-    this.audit.push(audit);
     this.outbox.push(outbox);
     this.remember(context, idempotencyKey, fingerprint, response);
     return response;
@@ -521,9 +522,8 @@ export class ProfileLifecycleStore {
         ...approval, state: "EXPIRED", revision: approval.revision + 1, reasonCode: "APPROVAL_EXPIRED", updatedAt: expiredAt,
       } satisfies ApprovalRow);
       const audit = this.auditRecord(context.organizationId, "profile.approval.expired.v1", approval.id, approvalDigest(expired), context.subjectDigest, expiredAt);
-      this.requireAudit();
+      this.commitAudit([audit]);
       this.approvals.set(`${context.organizationId}:${approval.id}`, expired);
-      this.audit.push(audit);
       throw new ControlError("PROFILE_APPROVAL_EXPIRED", 409);
     }
     if (
@@ -556,10 +556,9 @@ export class ProfileLifecycleStore {
       : profile;
     const response = approvalResponse(changedApproval, 200);
     const audit = this.auditRecord(context.organizationId, "profile.approval.decision.v1", approval.id, response.body.digest, context.subjectDigest, now);
-    this.requireAudit();
+    this.commitAudit([audit]);
     this.approvals.set(`${context.organizationId}:${approval.id}`, changedApproval);
     if (changedProfile !== profile) this.profiles.set(`${context.organizationId}:${profileId}`, changedProfile);
-    this.audit.push(audit);
     this.remember(context, idempotencyKey, fingerprint, response);
     return response;
   }
@@ -620,10 +619,9 @@ export class ProfileLifecycleStore {
     const response: StoredResponse<ProfileLockProjection> = Object.freeze({ status: 201, body, etag: `"${lock.digest.slice(7)}"` });
     const audit = this.auditRecord(context.organizationId, "profile.locked.v1", lock.id, lock.digest, context.subjectDigest, now);
     const outbox = this.outboxRecord(context.organizationId, "profile.locked.v1", lock.id, lock.digest, now);
-    this.requireAudit();
+    this.commitAudit([audit]);
     this.locks.set(`${context.organizationId}:${lock.id}`, lock);
     this.profiles.set(`${context.organizationId}:${profileId}`, changed);
-    this.audit.push(audit);
     this.outbox.push(outbox);
     this.remember(context, idempotencyKey, fingerprint, response);
     return response;
@@ -681,6 +679,7 @@ export class ProfileLifecycleStore {
     const requestDigest = sha256(canonicalJson({ id: bundle.id, profileLockDigest: lock.digest, operationId: operation.metadata.id }));
     const audit = this.auditRecord(context.organizationId, "bundle.requested.v1", bundle.id, requestDigest, context.subjectDigest, now);
     const outbox = this.outboxRecord(context.organizationId, "bundle.requested.v1", bundle.id, requestDigest, now);
+    this.auditChain.append([audit]);
     this.bundles.set(`${context.organizationId}:${bundle.id}`, bundle);
     this.bundleByLock.set(lockKey, bundle.id);
     this.profiles.set(`${context.organizationId}:${profileId}`, changed);
@@ -748,6 +747,7 @@ export class ProfileLifecycleStore {
       updatedAt: timestamp(nowEpoch),
     });
     const audit = this.auditRecord(bundle.organizationId, "bundle.source-reported-signed.v1", bundle.id, releaseDigest, sha256(envelope.sourceId), changed.updatedAt);
+    this.auditChain.append([audit]);
     this.bundles.set(`${bundle.organizationId}:${bundle.id}`, changed);
     this.inbox.set(envelope.eventId, Object.freeze({ fingerprint, envelope: immutableJson(envelope) }));
     this.sourceSequences.set(sequenceKey, envelope.sequence);
@@ -757,6 +757,10 @@ export class ProfileLifecycleStore {
 
   auditEvents(organizationId: string): readonly ProfileAuditEvent[] {
     return Object.freeze(this.audit.filter((item) => item.organizationId === organizationId));
+  }
+
+  auditChainRecords(organizationId: string): readonly AuditChainRecord[] {
+    return this.auditChain.records(organizationId);
   }
 
   outboxRecords(organizationId: string): readonly DigestOutboxRecord[] {
@@ -854,6 +858,12 @@ export class ProfileLifecycleStore {
       this.failAudit = false;
       throw new ControlError("AUDIT_WRITE_REFUSED", 500);
     }
+  }
+
+  private commitAudit(events: readonly ProfileAuditEvent[]): void {
+    this.requireAudit();
+    this.auditChain.append(events);
+    this.audit.push(...events.map((event) => Object.freeze(event)));
   }
 
   private auditRecord(

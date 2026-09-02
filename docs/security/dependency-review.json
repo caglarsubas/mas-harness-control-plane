@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "planeon.control.dependency-review/v1",
+  "reviewedAt": "2026-09-02T11:30:00Z",
+  "lockSha256": "362ccf86489852256e36585ad1241c76a9c094d04cf8a35c9c2554e2f5e15cf7",
+  "packageCount": 167,
+  "packageInventorySha256": "0cda1ebbee301fc3b592b062adde11cf6208bb40f601cfc713f4f95ca0dae0d7",
+  "allowedLicenses": [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 AND LGPL-3.0-or-later",
+    "Apache-2.0 AND LGPL-3.0-or-later AND MIT",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC-BY-4.0",
+    "ISC",
+    "LGPL-3.0-or-later",
+    "MIT",
+    "MPL-2.0"
+  ],
+  "allowedInstallScripts": [
+    {"path": "node_modules/@prisma/client", "version": "6.19.3", "execution": "SUPPRESSED_BY_NPM_CI_IGNORE_SCRIPTS"},
+    {"path": "node_modules/@prisma/engines", "version": "6.19.3", "execution": "SUPPRESSED_BY_NPM_CI_IGNORE_SCRIPTS"},
+    {"path": "node_modules/fsevents", "version": "2.3.3", "execution": "SUPPRESSED_BY_NPM_CI_IGNORE_SCRIPTS"},
+    {"path": "node_modules/playwright/node_modules/fsevents", "version": "2.3.2", "execution": "SUPPRESSED_BY_NPM_CI_IGNORE_SCRIPTS"},
+    {"path": "node_modules/prisma", "version": "6.19.3", "execution": "SUPPRESSED_BY_NPM_CI_IGNORE_SCRIPTS"}
+  ],
+  "advisorySources": [
+    {"name": "npm audit", "url": "https://registry.npmjs.org/-/npm/v1/security/advisories/bulk", "checkedAt": "2026-09-02T11:30:00Z"},
+    {"name": "GitHub Advisory Database", "url": "https://github.com/advisories/GHSA-ggr8-5vv4-36mx", "checkedAt": "2026-09-02T11:30:00Z"}
+  ],
+  "advisories": [
+    {
+      "id": "GHSA-ggr8-5vv4-36mx",
+      "severity": "HIGH",
+      "affected": "deepmerge-ts < 8.0.0 through the Prisma development CLI",
+      "installedVersions": ["deepmerge-ts@7.1.5", "@prisma/config@6.19.3", "prisma@6.19.3"],
+      "disposition": "MITIGATED_NOT_RUNTIME_REACHABLE",
+      "evidence": "The affected chain is devOptional; no application, worker, acceptance target, container build, or runtime entry point invokes the Prisma CLI, and npm installation runs with --ignore-scripts. Production-only npm audit reports zero HIGH and zero CRITICAL findings. The exact bootstrap Prisma pin cannot be silently replaced in CTRL-006."
+    }
+  ],
+  "runtimeAudit": {"command": "npm audit --omit=dev --omit=optional --json", "high": 0, "critical": 0}
+}

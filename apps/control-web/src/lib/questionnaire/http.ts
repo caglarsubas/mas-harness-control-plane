@@ -3,21 +3,13 @@ import { randomUUID } from "node:crypto";
 import { parseJsonNoDuplicates } from "../foundation/canonical";
 import { boundedError, ControlError } from "../foundation/contracts";
 import { rejectCallerIdentity } from "../foundation/session";
+import { assertBrowserMutation, secureJsonResponse } from "../security/http";
 import { JOURNEY_STAGES, QUESTIONNAIRE_SCHEMA, type StageId, type TenantAnswer } from "./contracts";
 import type { QuestionnaireRuntime } from "./runtime";
 import { mutationFingerprint } from "./session";
 
-const JSON_HEADERS = Object.freeze({
-  "cache-control": "no-store",
-  "content-type": "application/json; charset=utf-8",
-  "x-content-type-options": "nosniff",
-});
-
 function response(status: number, body: unknown, etag?: string): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...JSON_HEADERS, ...(etag ? { etag } : {}) },
-  });
+  return secureJsonResponse(status, body, etag);
 }
 
 function failure(error: unknown): Response {
@@ -92,6 +84,7 @@ export async function listQuestionnaires(request: Request, runtime: Questionnair
 
 export async function createQuestionnaireSession(request: Request, runtime: QuestionnaireRuntime): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request);
     exact(input, ["packId", "packVersion"]);
     identityCheck(request, input);
@@ -128,6 +121,7 @@ export async function saveQuestionnaireAnswers(
   sessionId: string,
 ): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request);
     exact(input, ["stageId", "answers"]);
     identityCheck(request, input);
@@ -164,6 +158,7 @@ export async function reviewQuestionnaireSession(
   sessionId: string,
 ): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request);
     exact(input, []);
     identityCheck(request, input);

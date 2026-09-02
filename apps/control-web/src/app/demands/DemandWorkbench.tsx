@@ -199,7 +199,7 @@ export function DemandWorkbench() {
         <span className={styles.brand}>Planeon · Harness Engineering</span>
         <a href="/questionnaires">Questionnaire journey</a>
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="demand-title">
           <div>
             <p className={styles.eyebrow}>Demand & approval control</p>
