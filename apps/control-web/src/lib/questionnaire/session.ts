@@ -18,6 +18,7 @@ import {
   type TenantAnswer,
 } from "./contracts";
 import { AdmittedIndustryPackRegistry } from "./pack";
+import { TenantAuditChain, type AuditChainRecord } from "../security/audit-chain";
 
 const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/u;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -137,7 +138,10 @@ export class QuestionnaireSessionStore {
   private readonly idempotency = new Map<string, IdempotencyRecord>();
   private auditFailure = false;
 
-  constructor(private readonly packs: AdmittedIndustryPackRegistry) {}
+  constructor(
+    private readonly packs: AdmittedIndustryPackRegistry,
+    private readonly auditChain = new TenantAuditChain(),
+  ) {}
 
   failNextAuditForTest(): void {
     this.auditFailure = true;
@@ -191,6 +195,7 @@ export class QuestionnaireSessionStore {
       this.auditFailure = false;
       throw new ControlError("AUDIT_APPEND_FAILED", 503);
     }
+    this.auditChain.append([event]);
     this.audit.push(Object.freeze(event));
   }
 
@@ -401,6 +406,11 @@ export class QuestionnaireSessionStore {
   auditEvents(context: TenantContext, id: string): readonly AuditEvent[] {
     this.requireRow(context, id);
     return Object.freeze(this.audit.filter((event) => event.organizationId === context.organizationId && event.aggregateId === id));
+  }
+
+  auditChainRecords(context: TenantContext): readonly AuditChainRecord[] {
+    assertContext(context);
+    return this.auditChain.records(context.organizationId);
   }
 }
 

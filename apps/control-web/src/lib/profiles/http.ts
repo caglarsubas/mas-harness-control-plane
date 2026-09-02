@@ -3,19 +3,14 @@ import { randomUUID } from "node:crypto";
 import { parseJsonNoDuplicates } from "../foundation/canonical";
 import { boundedError, ControlError } from "../foundation/contracts";
 import { rejectCallerIdentity } from "../foundation/session";
+import { API_SECURITY_HEADERS, assertBrowserMutation, secureTextResponse } from "../security/http";
 import type { ProfileRuntime } from "./runtime";
 import { profileMutationFingerprint } from "./service";
-
-const JSON_HEADERS = Object.freeze({
-  "cache-control": "no-store",
-  "content-type": "application/json; charset=utf-8",
-  "x-content-type-options": "nosniff",
-});
 
 function response(status: number, body: unknown, etag?: string, location?: string): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...JSON_HEADERS, ...(etag ? { etag } : {}), ...(location ? { location } : {}) },
+    headers: { ...API_SECURITY_HEADERS, "content-type": "application/json; charset=utf-8", ...(etag ? { etag } : {}), ...(location ? { location } : {}) },
   });
 }
 
@@ -77,14 +72,7 @@ export async function getProfileExplanation(request: Request, runtime: ProfileRu
     identityCheck(request);
     const context = runtime.authenticator.authenticate(request, false, runtime.nowEpoch());
     const explanation = runtime.store.explanation(context, profileId);
-    return new Response(Buffer.from(explanation), {
-      status: 200,
-      headers: {
-        "cache-control": "no-store",
-        "content-type": "text/markdown; charset=utf-8",
-        "x-content-type-options": "nosniff",
-      },
-    });
+    return secureTextResponse(200, Buffer.from(explanation).toString("utf8"), "text/markdown; charset=utf-8");
   } catch (error) {
     return failure(error);
   }
@@ -92,6 +80,7 @@ export async function getProfileExplanation(request: Request, runtime: ProfileRu
 
 export async function requestProfileApproval(request: Request, runtime: ProfileRuntime, profileId: string): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request, []);
     identityCheck(request, input);
     const context = runtime.authenticator.authenticate(request, true, runtime.nowEpoch());
@@ -119,6 +108,7 @@ export async function getProfileApproval(request: Request, runtime: ProfileRunti
 
 export async function recordProfileApprovalDecision(request: Request, runtime: ProfileRuntime, profileId: string): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request, ["decision", "reasonCode"]);
     identityCheck(request, input);
     if ((input.decision !== "APPROVE" && input.decision !== "REJECT") || typeof input.reasonCode !== "string") {
@@ -138,6 +128,7 @@ export async function recordProfileApprovalDecision(request: Request, runtime: P
 
 export async function lockProfile(request: Request, runtime: ProfileRuntime, profileId: string): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request, []);
     identityCheck(request, input);
     const context = runtime.authenticator.authenticate(request, true, runtime.nowEpoch());
@@ -154,6 +145,7 @@ export async function lockProfile(request: Request, runtime: ProfileRuntime, pro
 
 export async function requestBundle(request: Request, runtime: ProfileRuntime): Promise<Response> {
   try {
+    assertBrowserMutation(request);
     const input = await body(request, ["profileId"]);
     identityCheck(request, input);
     if (typeof input.profileId !== "string") throw new ControlError("REQUEST_BODY_REFUSED", 400);

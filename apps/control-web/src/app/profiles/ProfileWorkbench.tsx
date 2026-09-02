@@ -195,7 +195,7 @@ export function ProfileWorkbench() {
         <span className={styles.brand}>Planeon · Harness Engineering</span>
         <nav aria-label="Control-plane workspaces"><a href="/demands">Demand</a><a aria-current="page" href="/profiles">Profile review</a></nav>
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <section className={styles.hero} aria-labelledby="profile-title">
           <div><p className={styles.eyebrow}>Compiled profile control</p><h1 id="profile-title">Review the exact plan. Approve the lock. Handoff once.</h1></div>
           <p>Every action re-hashes the six stored compiler outputs. A profile lock is configuration authority—not evidence that an artifact exists or a harness is running.</p>

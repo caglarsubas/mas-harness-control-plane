@@ -168,7 +168,7 @@ export class InMemorySessionStore {
       this.transition(current.sessionId, "EXPIRED", nowEpoch);
       throw new ControlError("SESSION_EXPIRED", 401);
     }
-    if (mutation && (!csrfToken || sha256(csrfToken) !== current.csrfDigest)) throw new ControlError("CSRF_REFUSED", 403);
+    if (mutation && (!csrfToken || !digestEqual(sha256(csrfToken), current.csrfDigest))) throw new ControlError("CSRF_REFUSED", 403);
     return context(current);
   }
 
@@ -183,6 +183,12 @@ export class InMemorySessionStore {
   sessionRevisions(sessionId: string): readonly Readonly<SessionRevisionRecord>[] {
     return this.revisions.filter((revision) => revision.sessionId === sessionId);
   }
+}
+
+function digestEqual(actual: string, expected: string): boolean {
+  const left = Buffer.from(actual, "utf8");
+  const right = Buffer.from(expected, "utf8");
+  return left.length === right.length && timingSafeEqual(left, right);
 }
 
 function timestamp(epoch: number): string {

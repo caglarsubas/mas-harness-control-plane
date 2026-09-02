@@ -149,8 +149,8 @@ export function QuestionnaireJourney({ sessionId, stageId }: { readonly sessionI
     }
   }
 
-  if (state === "loading") return <main className={styles.main} aria-live="polite" aria-busy="true">Restoring the latest saved revision…</main>;
-  if (state === "error" || !session || !pack || !stage) return <main className={styles.main}><div className={styles.error} role="alert">{message}</div></main>;
+  if (state === "loading") return <main className={styles.main} id="main-content" tabIndex={-1} aria-live="polite" aria-busy="true">Restoring the latest saved revision…</main>;
+  if (state === "error" || !session || !pack || !stage) return <main className={styles.main} id="main-content" tabIndex={-1}><div className={styles.error} role="alert">{message}</div></main>;
 
   const busy = state === "saving" || state === "reviewing";
   const stageFindings = session.findings.filter((finding) => finding.revision === session.revision && finding.stageId === stageId && finding.severity === "BLOCKING");
@@ -161,7 +161,7 @@ export function QuestionnaireJourney({ sessionId, stageId }: { readonly sessionI
         <span className={styles.brand}>Planeon · Guided setup</span>
         <span className={styles.security}>Revision {session.revision} · saved server-side</span>
       </header>
-      <main className={styles.main}>
+      <main className={styles.main} id="main-content" tabIndex={-1}>
         <div className={styles.workspace}>
           <aside className={styles.sidebar} aria-label="Questionnaire progress">
             <p className={styles.eyebrow}>Eight-stage journey</p>

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "planeon.control.ctrl-006-predecessor-lock/v1",
+  "controlPlane": {
+    "commit": "8e89226acfdcd1f5034d4ee71bb1a161553350b0"
+  },
+  "trust002": {
+    "commit": "c9b4b66c9343e6824348be694df28f30e771f571",
+    "exactMainRun": 33528837543,
+    "guardrailRequestSha256": "f420c30c592f98b1b064e95265c1dd5743c09bf7b1a7db537fb1c83d48b296e8",
+    "guardrailResponseSha256": "9c9e455ce5675c5e0ce0a0d02b227df21f67e7b73a7841b87200b872b4734709",
+    "signedProfileSha256": "453d831272dc712e1c5294267df936ad1c5e8d65795e475c2fe0008234a613f6",
+    "upstreamLockSha256": "422d2c93bdeaf858057a7962edd0ad61f16bfe5cd66cb4d3c25742d8958784c1"
+  }
+}
