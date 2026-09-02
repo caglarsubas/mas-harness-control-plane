@@ -431,7 +431,8 @@ function admittedPolicy(value: unknown, requesterDigest: string, nowEpoch: numbe
 }
 
 function transition(current: DemandState, next: DemandState): void {
-  if (!DEMAND_TRANSITIONS[current].includes(next)) throw new ControlError("DEMAND_TRANSITION_REFUSED", 409);
+  const allowed: readonly DemandState[] = DEMAND_TRANSITIONS[current];
+  if (!allowed.includes(next)) throw new ControlError("DEMAND_TRANSITION_REFUSED", 409);
 }
 
 function sourceMatches(left: DemandSourceReference, right: DemandSourceReference): boolean {
