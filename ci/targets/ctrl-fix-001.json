@@ -1,0 +1,11 @@
+{
+  "packetId": "CTRL-FIX-001",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [["python3", "-m", "unittest", "tests/bootstrap/test_static_contract.py"]],
+      "name": "prefetch-lineage-regression"
+    }
+  ]
+}
