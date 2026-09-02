@@ -1,0 +1,136 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["control"]
+}
+
+model Tenant {
+  organizationId String   @id @db.Uuid @map("organization_id")
+  tenantDigest   String   @map("tenant_digest")
+  version        BigInt   @default(1)
+  createdAt      DateTime @db.Timestamptz(6) @map("created_at")
+  auditEventId   String   @db.Uuid @map("audit_event_id")
+
+  @@map("tenant")
+  @@schema("control")
+}
+
+model AuthorizationAttempt {
+  organizationId    String    @db.Uuid @map("organization_id")
+  attemptId          String    @db.Uuid @map("attempt_id")
+  stateDigest        String    @map("state_digest")
+  nonceDigest        String    @map("nonce_digest")
+  pkceVerifierDigest String    @map("pkce_verifier_digest")
+  createdAt          DateTime  @db.Timestamptz(6) @map("created_at")
+  expiresAt          DateTime  @db.Timestamptz(6) @map("expires_at")
+  consumedAt         DateTime? @db.Timestamptz(6) @map("consumed_at")
+  version            BigInt    @default(1)
+  auditEventId       String    @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, attemptId])
+  @@map("authorization_attempt")
+  @@schema("control")
+}
+
+model AuthSession {
+  organizationId        String   @db.Uuid @map("organization_id")
+  sessionId             String   @db.Uuid @map("session_id")
+  subjectDigest         String   @map("subject_digest")
+  admissionDigest       String   @map("admission_digest")
+  cookieDigest          String   @map("cookie_digest")
+  csrfDigest            String   @map("csrf_digest")
+  currentRevision       BigInt   @default(1) @map("current_revision")
+  issuedAt              DateTime @db.Timestamptz(6) @map("issued_at")
+  absoluteExpiresAt     DateTime @db.Timestamptz(6) @map("absolute_expires_at")
+  idleExpiresAt         DateTime @db.Timestamptz(6) @map("idle_expires_at")
+  version               BigInt   @default(1)
+  auditEventId          String   @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, sessionId])
+  @@unique([organizationId, cookieDigest])
+  @@map("auth_session")
+  @@schema("control")
+}
+
+model AuthSessionRevision {
+  organizationId String   @db.Uuid @map("organization_id")
+  sessionId      String   @db.Uuid @map("session_id")
+  revision       BigInt
+  state          String
+  occurredAt     DateTime @db.Timestamptz(6) @map("occurred_at")
+  reasonCode     String   @map("reason_code")
+  version        BigInt   @default(1)
+  auditEventId   String   @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, sessionId, revision])
+  @@map("auth_session_revision")
+  @@schema("control")
+}
+
+model AuditEvent {
+  organizationId String   @db.Uuid @map("organization_id")
+  eventId        String   @db.Uuid @map("event_id")
+  eventType      String   @map("event_type")
+  aggregateId    String   @db.Uuid @map("aggregate_id")
+  aggregateDigest String  @map("aggregate_digest")
+  actorDigest    String   @map("actor_digest")
+  occurredAt     DateTime @db.Timestamptz(6) @map("occurred_at")
+  version        BigInt   @default(1)
+  auditLinkDigest String  @map("audit_link_digest")
+
+  @@id([organizationId, eventId])
+  @@map("audit_event")
+  @@schema("control")
+}
+
+model IdempotencyRecord {
+  organizationId  String   @db.Uuid @map("organization_id")
+  idempotencyDigest String  @map("idempotency_digest")
+  requestDigest   String   @map("request_digest")
+  responseDigest  String   @map("response_digest")
+  createdAt       DateTime @db.Timestamptz(6) @map("created_at")
+  expiresAt       DateTime @db.Timestamptz(6) @map("expires_at")
+  version         BigInt   @default(1)
+  auditEventId    String   @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, idempotencyDigest])
+  @@map("idempotency_record")
+  @@schema("control")
+}
+
+model EventInbox {
+  organizationId String    @db.Uuid @map("organization_id")
+  eventId        String    @db.Uuid @map("event_id")
+  eventType      String    @map("event_type")
+  aggregateId    String    @db.Uuid @map("aggregate_id")
+  eventDigest    String    @map("event_digest")
+  receivedAt     DateTime  @db.Timestamptz(6) @map("received_at")
+  processedAt    DateTime? @db.Timestamptz(6) @map("processed_at")
+  version        BigInt    @default(1)
+  auditEventId   String    @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, eventId])
+  @@map("event_inbox")
+  @@schema("control")
+}
+
+model EventOutbox {
+  organizationId String    @db.Uuid @map("organization_id")
+  eventId        String    @db.Uuid @map("event_id")
+  eventType      String    @map("event_type")
+  aggregateId    String    @db.Uuid @map("aggregate_id")
+  payloadDigest  String    @map("payload_digest")
+  occurredAt     DateTime  @db.Timestamptz(6) @map("occurred_at")
+  publishedAt    DateTime? @db.Timestamptz(6) @map("published_at")
+  version        BigInt    @default(1)
+  auditEventId   String    @db.Uuid @map("audit_event_id")
+
+  @@id([organizationId, eventId])
+  @@map("event_outbox")
+  @@schema("control")
+}

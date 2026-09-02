@@ -1,0 +1,15 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+COPY --chown=65532:65532 apps/control-web/.next/standalone/ ./
+COPY --chown=65532:65532 apps/control-web/.next/static/ ./apps/control-web/.next/static/
+
+ENV HOSTNAME=0.0.0.0 \
+    NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000
+
+USER 65532:65532
+EXPOSE 3000
+ENTRYPOINT ["/usr/local/bin/node", "apps/control-web/server.js"]

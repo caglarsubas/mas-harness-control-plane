@@ -1,0 +1,33 @@
+{
+  "name": "@planeon/mas-harness-control-plane",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline-first Planeon multi-agent harness control plane",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": "24.20.0",
+    "npm": "11.11.0"
+  },
+  "packageManager": "npm@11.11.0",
+  "scripts": {
+    "build": "next build apps/control-web",
+    "test": "vitest run --config apps/control-web/vitest.config.ts",
+    "typecheck": "tsc --project apps/control-web/tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "ajv": "8.20.0",
+    "next": "16.3.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "prisma": "6.19.3",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

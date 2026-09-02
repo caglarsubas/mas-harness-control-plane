@@ -1,0 +1,29 @@
+web:
+  enabled: false
+  replicas: 1
+  image:
+    repository: ""
+    digest: ""
+  existingConfigSecret: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+worker:
+  enabled: false
+  replicas: 1
+  image:
+    repository: ""
+    digest: ""
+  existingConfigSecret: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi

@@ -1,0 +1,11 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+WORKDIR /app
+COPY --chown=65532:65532 workers/profile-compiler/worker.py /app/worker.py
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+USER 65532:65532
+ENTRYPOINT ["/usr/local/bin/python3", "/app/worker.py"]

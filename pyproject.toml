@@ -1,0 +1,13 @@
+[project]
+name = "planeon-harness-control-plane-worker"
+version = "0.1.0"
+description = "Inert offline-first profile compiler worker foundation"
+readme = "README.md"
+requires-python = "==3.12.*"
+license = "Apache-2.0"
+dependencies = []
+
+[tool.planeon]
+packet = "CTRL-001"
+network-default = "disabled"
+worker-outcome = "IDLE_BOOTSTRAP"
