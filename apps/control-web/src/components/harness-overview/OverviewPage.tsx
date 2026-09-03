@@ -67,9 +67,9 @@ export function OverviewPage({ overview, harnesses, filters, operatorScope = fal
         {overview.spec.freshness.state !== "CURRENT" && <div className={styles.staleBanner} role="alert"><strong>Current health is withheld.</strong> Last verified projection: {overview.spec.freshness.projectedAt}. Source state: {statusLabel(overview.spec.freshness.state)}.</div>}
 
         <section className={styles.bindingStrip} aria-label="Immutable projection bindings">
-          <div><span>Profile</span><code title={overview.binding.profileDigest}>{digest(overview.binding.profileDigest)}</code></div>
-          <div><span>Bundle</span><code title={overview.binding.bundleDigest}>{digest(overview.binding.bundleDigest)}</code></div>
-          <div><span>Release</span><code title={overview.binding.releaseDigest}>{digest(overview.binding.releaseDigest)}</code></div>
+          <div><span>Profile</span><code aria-label={`Full profile digest: ${overview.binding.profileDigest}`}>{digest(overview.binding.profileDigest)}</code></div>
+          <div><span>Bundle</span><code aria-label={`Full bundle digest: ${overview.binding.bundleDigest}`}>{digest(overview.binding.bundleDigest)}</code></div>
+          <div><span>Release</span><code aria-label={`Full release digest: ${overview.binding.releaseDigest}`}>{digest(overview.binding.releaseDigest)}</code></div>
           <div><span>Observed generation</span><strong>{overview.binding.observedGeneration}</strong></div>
           <div><span>Fresh until</span><time dateTime={overview.binding.freshUntil}>{overview.binding.freshUntil}</time></div>
         </section>
