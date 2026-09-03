@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "packetId": "CTRL-FIX-002",
+  "targets": [
+    {
+      "name": "ctrl-fix-002-regression",
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["npm", "run", "build"],
+        ["node_modules/.bin/vitest", "run", "tests/harness-status/ui-source.test.ts", "tests/security/rls.test.ts", "--pool=forks", "--sequence.concurrent=false"],
+        ["node_modules/.bin/playwright", "test", "e2e/harness-overview.spec.ts", "--workers=1", "--reporter=line"]
+      ]
+    }
+  ]
+}
