@@ -56,6 +56,7 @@ export function validateBinding(binding: ProjectionBinding): void {
 
 export function deriveFreshness(binding: ProjectionBinding, nowEpoch: number): ProjectionFreshness {
   validateBinding(binding);
+  if (!Number.isFinite(nowEpoch) || nowEpoch * 1000 < Date.parse(binding.projectedAt)) fail("STATUS_CLOCK_INVALID");
   const sourceUnavailable = binding.sourceCursors.some((cursor) => cursor.state === "SOURCE_UNAVAILABLE");
   return Object.freeze({
     state: sourceUnavailable ? "SOURCE_UNAVAILABLE" : Date.parse(binding.freshUntil) <= nowEpoch * 1000 ? "STALE" : "CURRENT",
@@ -74,11 +75,11 @@ export function deriveHarnessAggregate(
   if (selection === "NOT_SELECTED" || selection === "PROPOSED") return "EMPTY";
   if (installation === "REVOKED") return "REVOKED";
   if (installation === "FAILED" || axes.some((axis) => axis.required && axis.state === "FAIL")) return "FAILED";
-  const blockedAxis = new Set<EvidenceState>(["MISSING", "STALE", "NOT_RUN_ENV_UNAVAILABLE"]);
-  if (selection === "BLOCKED" || installation === "BLOCKED" || freshness.state !== "CURRENT" || axes.some((axis) => axis.required && blockedAxis.has(axis.state))) return "BLOCKED";
-  if (installation === "DEGRADED" || axes.some((axis) => axis.state === "WARN" || axis.state === "WAIVED")) return "DEGRADED";
+  const blockedAxis = new Set<EvidenceState>(["MISSING", "COLLECTING", "STALE", "NOT_RUN_ENV_UNAVAILABLE"]);
+  if (selection === "BLOCKED" || (installation !== "READY" && installation !== "DEGRADED") || freshness.state !== "CURRENT" || axes.some((axis) => axis.required && blockedAxis.has(axis.state))) return "BLOCKED";
+  if (installation === "DEGRADED" || axes.some((axis) => axis.state === "WARN" || axis.state === "WAIVED" || (!axis.required && axis.state !== "PASS" && axis.state !== "NOT_APPLICABLE"))) return "DEGRADED";
   const requiredReady = axes.filter((axis) => axis.required).every((axis) => axis.state === "PASS" || axis.state === "NOT_APPLICABLE");
-  return installation === "READY" && requiredReady ? "READY" : "BLOCKED";
+  return requiredReady ? "READY" : "BLOCKED";
 }
 
 export function highestEvidenceState(axes: readonly StatusAxisProjection[]): EvidenceState {
