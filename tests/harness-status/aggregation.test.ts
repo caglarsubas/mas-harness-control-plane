@@ -44,4 +44,21 @@ describe("closed status aggregation", () => {
     expect(() => validateBinding({ ...binding, projectionSchemaVersion: "changed" as typeof PROJECTION_SCHEMA_VERSION })).toThrowError(ControlError);
     expect(() => validateBinding({ ...binding, sourceCursors: [...binding.sourceCursors].reverse() })).toThrowError("STATUS_CURSOR_ORDER_INVALID");
   });
+
+  it("does not let warnings or waivers mask a collecting axis or non-ready installation", () => {
+    const warning = passingAxes.map((axis, index) => index === 0 ? { ...axis, required: false, state: "WARN" as const } : axis);
+    for (const installation of ["ABSENT", "PENDING", "PREFLIGHT", "VERIFYING", "APPLYING", "HEALTH_CHECKING", "UPGRADING", "ROLLING_BACK", "UNINSTALLING", "REMOVED", "RETIRED"] as const) {
+      expect(deriveHarnessAggregate("SELECTED", installation, warning, current)).toBe("BLOCKED");
+    }
+    const collecting = warning.map((axis, index) => index === 1 ? { ...axis, state: "COLLECTING" as const } : axis);
+    expect(deriveHarnessAggregate("SELECTED", "DEGRADED", collecting, current)).toBe("BLOCKED");
+    expect(deriveHarnessAggregate("SELECTED", "READY", collecting, current)).toBe("BLOCKED");
+  });
+
+  it("refuses invalid or pre-projection clocks instead of inventing currentness", () => {
+    const binding = createFixtureProjectionSet().overview.binding!;
+    for (const instant of [NaN, Infinity, -Infinity, Date.parse(binding.projectedAt) / 1000 - 1]) {
+      expect(() => deriveFreshness(binding, instant)).toThrowError("STATUS_CLOCK_INVALID");
+    }
+  });
 });

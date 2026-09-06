@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "packetId": "CTRL-FIX-003",
+  "targets": [
+    {
+      "name": "ctrl-fix-003-regression",
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["npm", "run", "build"],
+        ["node_modules/.bin/vitest", "run", "tests", "--pool=forks", "--sequence.concurrent=false"]
+      ]
+    }
+  ]
+}
