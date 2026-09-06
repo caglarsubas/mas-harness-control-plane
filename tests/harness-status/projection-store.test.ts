@@ -71,7 +71,7 @@ function readyProjection(organizationId = ORGANIZATION, displayName = "Organizat
     ...planeSummary(plane.spec.planeId, summaries.filter((harness) => harness.planeId === plane.spec.planeId)), freshness } }));
   return { harnesses, planes, overview: { ...original.overview, spec: { ...original.overview.spec,
     aggregateState: stale ? "BLOCKED" : "READY", freshness, priorityFindings: [],
-    harnesses: summaries, planes: planes.map((plane) => plane.spec),
+    harnesses: summaries, planes: original.overview.spec.planes.map((plane) => planeSummary(plane.planeId, summaries.filter((harness) => harness.planeId === plane.planeId))),
     stateCounts: original.overview.spec.stateCounts.map((row) => ({ ...row, count: summaries.filter((harness) => harness.aggregateState === row.state).length })),
   } } };
 }
