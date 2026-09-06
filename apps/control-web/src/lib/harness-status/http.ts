@@ -32,16 +32,17 @@ function requestQuery(request: Request, allowed: readonly string[]): Readonly<Re
   return Object.freeze(query);
 }
 
-function tenantContext(request: Request, runtime: HarnessStatusRuntime, action: TenantStatusAction): TenantContext {
+function tenantContext(request: Request, runtime: HarnessStatusRuntime, action: TenantStatusAction, nowEpoch: number): TenantContext {
   requestQuery(request, []);
-  const context = runtime.authenticator.authenticate(request, false, runtime.nowEpoch());
+  const context = runtime.authenticator.authenticate(request, false, nowEpoch);
   if (!runtime.tenantPolicy.authorize(context, action)) throw new ControlError("STATUS_ACCESS_REFUSED", 403);
   return context;
 }
 
 export async function getTenantOverview(request: Request, runtime: HarnessStatusRuntime): Promise<Response> {
   try {
-    return response(200, runtime.store.readOverview(tenantContext(request, runtime, "harness:overview:view")));
+    const nowEpoch = runtime.nowEpoch();
+    return response(200, runtime.store.readOverview(tenantContext(request, runtime, "harness:overview:view", nowEpoch), nowEpoch));
   } catch (error) {
     return failure(error);
   }
@@ -49,9 +50,10 @@ export async function getTenantOverview(request: Request, runtime: HarnessStatus
 
 export async function getTenantPlane(request: Request, runtime: HarnessStatusRuntime, planeId: string): Promise<Response> {
   try {
-    const context = tenantContext(request, runtime, "harness:detail:view");
+    const nowEpoch = runtime.nowEpoch();
+    const context = tenantContext(request, runtime, "harness:detail:view", nowEpoch);
     if (!planeDefinition(planeId)) throw new ControlError("STATUS_PROJECTION_NOT_FOUND", 404);
-    return response(200, runtime.store.readPlane(context, planeId as PlaneId));
+    return response(200, runtime.store.readPlane(context, planeId as PlaneId, nowEpoch));
   } catch (error) {
     return failure(error);
   }
@@ -59,9 +61,10 @@ export async function getTenantPlane(request: Request, runtime: HarnessStatusRun
 
 export async function getTenantHarness(request: Request, runtime: HarnessStatusRuntime, harnessId: string): Promise<Response> {
   try {
-    const context = tenantContext(request, runtime, "harness:detail:view");
+    const nowEpoch = runtime.nowEpoch();
+    const context = tenantContext(request, runtime, "harness:detail:view", nowEpoch);
     if (!harnessDefinition(harnessId)) throw new ControlError("STATUS_PROJECTION_NOT_FOUND", 404);
-    return response(200, runtime.store.readHarness(context, harnessId));
+    return response(200, runtime.store.readHarness(context, harnessId, nowEpoch));
   } catch (error) {
     return failure(error);
   }
@@ -71,6 +74,7 @@ function operatorDecision(
   runtime: HarnessStatusRuntime,
   context: TenantContext,
   target: string,
+  nowEpoch: number,
 ): void {
   const decision = runtime.operatorPolicy.authorize(context.subjectDigest, "organization:portfolio:view", target);
   runtime.store.appendOperatorAudit({
@@ -79,7 +83,7 @@ function operatorDecision(
     target,
     decision: decision.allowed ? "ALLOW" : "DENY",
     policyDigest: decision.policyDigest,
-    occurredAt: new Date(runtime.nowEpoch() * 1000).toISOString().replace(".000Z", "Z"),
+    occurredAt: new Date(nowEpoch * 1000).toISOString().replace(".000Z", "Z"),
   });
   if (!decision.allowed) throw new ControlError(target === "LIST" ? "STATUS_ACCESS_REFUSED" : "STATUS_PROJECTION_NOT_FOUND", target === "LIST" ? 403 : 404);
 }
@@ -87,11 +91,12 @@ function operatorDecision(
 export async function getOrganizationPortfolio(request: Request, runtime: HarnessStatusRuntime): Promise<Response> {
   try {
     const query = requestQuery(request, ["cursor", "limit", "state"]);
-    const context = runtime.authenticator.authenticate(request, false, runtime.nowEpoch());
-    operatorDecision(runtime, context, "LIST");
+    const nowEpoch = runtime.nowEpoch();
+    const context = runtime.authenticator.authenticate(request, false, nowEpoch);
+    operatorDecision(runtime, context, "LIST", nowEpoch);
     const limit = query.limit === undefined ? 50 : Number(query.limit);
     const state = query.state === undefined ? null : AGGREGATE_STATES.includes(query.state as AggregateState) ? query.state as AggregateState : (() => { throw new ControlError("STATUS_QUERY_REFUSED", 400); })();
-    return response(200, runtime.store.portfolio(limit, query.cursor ?? null, state));
+    return response(200, runtime.store.portfolio(limit, query.cursor ?? null, state, nowEpoch));
   } catch (error) {
     return failure(error);
   }
@@ -104,9 +109,10 @@ export async function getOrganizationOverview(
 ): Promise<Response> {
   try {
     requestQuery(request, []);
-    const context = runtime.authenticator.authenticate(request, false, runtime.nowEpoch());
-    operatorDecision(runtime, context, organizationId);
-    return response(200, runtime.store.readOrganization(organizationId));
+    const nowEpoch = runtime.nowEpoch();
+    const context = runtime.authenticator.authenticate(request, false, nowEpoch);
+    operatorDecision(runtime, context, organizationId, nowEpoch);
+    return response(200, runtime.store.readOrganization(organizationId, nowEpoch));
   } catch (error) {
     return failure(error);
   }

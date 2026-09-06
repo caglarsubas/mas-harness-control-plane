@@ -8,12 +8,14 @@ import {
   type OrganizationPortfolioPage,
   type PlaneId,
   type PlaneStatusProjection,
+  type ProjectionBinding,
+  type ProjectionFreshness,
   type SourceId,
   type SourceSummary,
   type TenantHarnessOverview,
   sourceCursorId,
 } from "./contracts";
-import { harnessSummary, planeSummary, validateOverview } from "./aggregation";
+import { deriveFreshness, deriveHarnessAggregate, harnessSummary, planeSummary, validateOverview } from "./aggregation";
 
 interface CursorRecord {
   readonly sequence: number;
@@ -92,6 +94,18 @@ function bindingMatches(summary: SourceSummary): boolean {
     && binding.observedGeneration === summary.observedGeneration;
 }
 
+function freezeSnapshot<T>(value: T): T {
+  if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) freezeSnapshot(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+function withFreshness(state: AggregateState, freshness: ProjectionFreshness): AggregateState {
+  return freshness.state !== "CURRENT" && (state === "READY" || state === "DEGRADED") ? "BLOCKED" : state;
+}
+
 export class ProjectionStore {
   private projections = new Map<string, ProjectionRecord>();
   private cursors = new Map<string, CursorRecord>();
@@ -147,7 +161,9 @@ export class ProjectionStore {
       || priorProjection.overview.binding.observedGeneration !== summary.observedGeneration
     )) throw new ControlError("STATUS_PROJECTION_BINDING_CONFLICT", 409);
 
-    const nextRecord = Object.freeze({ overview: summary.overview, planes: summary.planes, harnesses: summary.harnesses });
+    // Take custody of values, not caller aliases. Read-time derivation never
+    // changes these admitted facts, including nested cursors and evidence refs.
+    const nextRecord = freezeSnapshot(structuredClone({ overview: summary.overview, planes: summary.planes, harnesses: summary.harnesses }));
     const nextCursor = Object.freeze({ sequence: summary.sequence, cursor: summary.cursor, eventId: summary.eventId, contentDigest: summary.contentDigest, observedAt: summary.observedAt });
     this.projections.set(summary.organizationId, nextRecord);
     this.cursors.set(cursorKey, nextCursor);
@@ -163,29 +179,29 @@ export class ProjectionStore {
     this.unavailable.set(organizationId, unavailable);
   }
 
-  readOverview(context: TenantContext): TenantHarnessOverview {
-    return this.readOrganization(context.organizationId);
+  readOverview(context: TenantContext, nowEpoch = Date.now() / 1000): TenantHarnessOverview {
+    return this.readOrganization(context.organizationId, nowEpoch);
   }
 
-  readPlane(context: TenantContext, planeId: PlaneId): PlaneStatusProjection {
-    return this.materialize(context.organizationId).planes.find((plane) => plane.spec.planeId === planeId) ?? this.notFound();
+  readPlane(context: TenantContext, planeId: PlaneId, nowEpoch = Date.now() / 1000): PlaneStatusProjection {
+    return this.materialize(context.organizationId, nowEpoch).planes.find((plane) => plane.spec.planeId === planeId) ?? this.notFound();
   }
 
-  readHarness(context: TenantContext, harnessId: string): HarnessStatusProjection {
-    return this.materialize(context.organizationId).harnesses.find((harness) => harness.spec.harnessId === harnessId) ?? this.notFound();
+  readHarness(context: TenantContext, harnessId: string, nowEpoch = Date.now() / 1000): HarnessStatusProjection {
+    return this.materialize(context.organizationId, nowEpoch).harnesses.find((harness) => harness.spec.harnessId === harnessId) ?? this.notFound();
   }
 
-  readOrganization(organizationId: string): TenantHarnessOverview {
-    return this.materialize(organizationId).overview;
+  readOrganization(organizationId: string, nowEpoch = Date.now() / 1000): TenantHarnessOverview {
+    return this.materialize(organizationId, nowEpoch).overview;
   }
 
   organizationIds(): readonly string[] {
     return [...this.projections.keys()].sort();
   }
 
-  portfolio(limit: number, cursor: string | null, state: AggregateState | null): OrganizationPortfolioPage {
+  portfolio(limit: number, cursor: string | null, state: AggregateState | null, nowEpoch = Date.now() / 1000): OrganizationPortfolioPage {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200 || (state !== null && !AGGREGATE_STATES.includes(state))) throw new ControlError("STATUS_QUERY_REFUSED", 400);
-    const records = [...this.projections.values()].map((record) => record.overview).filter((overview) => overview.binding !== null && (state === null || overview.spec.aggregateState === state))
+    const records = this.organizationIds().map((id) => this.materialize(id, nowEpoch).overview).filter((overview) => overview.binding !== null && (state === null || overview.spec.aggregateState === state))
       .sort((left, right) => left.spec.displayName.localeCompare(right.spec.displayName) || left.spec.organizationId.localeCompare(right.spec.organizationId));
     const cursorFor = (overview: TenantHarnessOverview) => sha256(canonicalJson({ organizationId: overview.spec.organizationId, displayName: overview.spec.displayName }));
     const start = cursor === null ? 0 : records.findIndex((overview) => cursorFor(overview) === cursor) + 1;
@@ -237,31 +253,52 @@ export class ProjectionStore {
     return this.cursors.get(`${organizationId}:${sourceId}`);
   }
 
-  private materialize(organizationId: string): ProjectionRecord {
+  private materialize(organizationId: string, nowEpoch: number): ProjectionRecord {
+    if (!Number.isFinite(nowEpoch)) throw new ControlError("STATUS_CLOCK_INVALID", 422);
     const record = this.projections.get(organizationId);
     if (!record) return this.notFound();
     const unavailable = this.unavailable.get(organizationId);
-    if (!unavailable?.size || !record.overview.binding) return record;
-    const unavailableCursorIds = new Set([...unavailable].map(sourceCursorId));
-    const sourceCursors = record.overview.binding.sourceCursors.map((cursor) => unavailableCursorIds.has(cursor.sourceId) ? { ...cursor, state: "SOURCE_UNAVAILABLE" as const } : cursor);
-    const binding = Object.freeze({ ...record.overview.binding, sourceCursors: Object.freeze(sourceCursors) });
-    const freshness = Object.freeze({ state: "SOURCE_UNAVAILABLE" as const, projectedAt: binding.projectedAt, freshUntil: binding.freshUntil, sourceCursors: binding.sourceCursors });
-    const harnesses = record.harnesses.map((harness) => Object.freeze({
-      ...harness,
-      binding,
-      spec: Object.freeze({ ...harness.spec, freshness }),
-    }));
+    if (!record.overview.binding) return record;
+    const unavailableCursorIds = new Set([...(unavailable ?? [])].map(sourceCursorId));
+    const materializedBinding = (admitted: ProjectionBinding): ProjectionBinding => unavailableCursorIds.size === 0 ? admitted : freezeSnapshot({
+      ...admitted,
+      sourceCursors: admitted.sourceCursors.map((cursor) => unavailableCursorIds.has(cursor.sourceId) ? { ...cursor, state: "SOURCE_UNAVAILABLE" as const } : cursor),
+    });
+    const materializedFreshness = (binding: ProjectionBinding): ProjectionFreshness => {
+      const derived = deriveFreshness(binding, nowEpoch);
+      // An explicitly unavailable organization source is never hidden by expiry
+      // or by a snapshot that does not yet contain that source's cursor.
+      return unavailableCursorIds.size === 0 ? derived : Object.freeze({ ...derived, state: "SOURCE_UNAVAILABLE" });
+    };
+    const binding = materializedBinding(record.overview.binding);
+    const freshness = materializedFreshness(binding);
+    const harnesses = record.harnesses.map((harness) => {
+      const binding = materializedBinding(harness.binding);
+      const freshness = materializedFreshness(binding);
+      return Object.freeze({ ...harness, binding, spec: Object.freeze({ ...harness.spec, freshness,
+        aggregateState: deriveHarnessAggregate(harness.spec.selectionState, harness.spec.installationState, harness.spec.axes, freshness),
+      }) });
+    });
     const summaries = harnesses.map(harnessSummary);
-    const planes = record.planes.map((plane) => {
+    const planeSummaries = record.planes.map((plane) => {
       const summary = planeSummary(plane.spec.planeId, summaries.filter((item) => item.planeId === plane.spec.planeId));
-      return Object.freeze({ ...plane, binding, spec: Object.freeze({ ...plane.spec, ...summary, freshness }) });
+      const freshness = materializedFreshness(materializedBinding(plane.binding));
+      return Object.freeze({ ...summary, aggregateState: withFreshness(summary.aggregateState, freshness),
+        freshnessState: summary.freshnessState === "SOURCE_UNAVAILABLE" || freshness.state === "SOURCE_UNAVAILABLE" ? "SOURCE_UNAVAILABLE" as const
+          : summary.freshnessState === "STALE" || freshness.state === "STALE" ? "STALE" as const : "CURRENT" as const });
+    });
+    const planes = record.planes.map((plane, index) => {
+      const binding = materializedBinding(plane.binding);
+      return Object.freeze({ ...plane, binding, spec: Object.freeze({ ...plane.spec, ...planeSummaries[index]!, freshness: materializedFreshness(binding) }) });
     });
     const rank: Record<AggregateState, number> = { EMPTY: 0, READY: 1, DEGRADED: 2, BLOCKED: 3, FAILED: 4, REVOKED: 5 };
     const aggregateState = planes.reduce<AggregateState>((worst, plane) => rank[plane.spec.aggregateState] > rank[worst] ? plane.spec.aggregateState : worst, "EMPTY");
     const overview = Object.freeze({
       ...record.overview,
       binding,
-      spec: Object.freeze({ ...record.overview.spec, freshness, aggregateState, planes: Object.freeze(planes.map((plane) => plane.spec)), harnesses: Object.freeze(summaries) }),
+      spec: Object.freeze({ ...record.overview.spec, freshness, aggregateState: withFreshness(aggregateState, freshness),
+        stateCounts: Object.freeze(record.overview.spec.stateCounts.map((row) => Object.freeze({ ...row, count: summaries.filter((harness) => harness.aggregateState === row.state).length }))),
+        planes: Object.freeze(planeSummaries), harnesses: Object.freeze(summaries) }),
     });
     return Object.freeze({ overview, planes: Object.freeze(planes), harnesses: Object.freeze(harnesses) });
   }
