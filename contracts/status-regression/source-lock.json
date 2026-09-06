@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "planeon.control.status-regression-lock/v1",
+  "packetId": "CTRL-FIX-003",
+  "repository": "caglarsubas/mas-harness-contracts",
+  "sourceCommit": "fb365aabfd8c5560e064be5d97ff9f2bcc69c57c",
+  "sourcePacketId": "CON-FIX-001",
+  "pullRequest": 8,
+  "requiredCiRun": 33982852363,
+  "evidenceClassification": "INDEPENDENT_CONTRACT_VECTOR",
+  "runtimeAcceptance": false,
+  "files": [
+    {
+      "sourcePath": "tests/fixtures/status/aggregation-interoperability.json",
+      "path": "aggregation-interoperability.json",
+      "sha256": "4cfd71c300ccb2209a52d00230711820a0da52faea5169b86f5db1d3638d56bc"
+    },
+    {
+      "sourcePath": "contracts/release-manifest.json",
+      "path": "release-manifest.json",
+      "sha256": "c2e6976aac3b63d7152943c0ff73b332a297081e376f6abc3f3ee3a9371a6b25"
+    },
+    {
+      "sourcePath": "docs/status-projections.md",
+      "path": "status-projections.md",
+      "sha256": "b9e074ccb056baa79f9617f9da203797fa481a81a8125e773101d147db4c261b"
+    },
+    {
+      "sourcePath": "generated/status-semantics.json",
+      "path": "status-semantics.json",
+      "sha256": "ab0dca30d0411c6f5897652e044ef3ad732f5feba7c4852bdca111b2112f844f"
+    }
+  ]
+}

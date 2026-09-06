@@ -1,0 +1,489 @@
+{
+  "schemaVersion": "harness.planeon.ai/aggregation-interoperability/v1",
+  "evidenceClassification": "INDEPENDENT_CONTRACT_VECTOR",
+  "authority": {
+    "document": "docs/status-projections.md",
+    "documentSha256": "b9e074ccb056baa79f9617f9da203797fa481a81a8125e773101d147db4c261b",
+    "semantics": "generated/status-semantics.json",
+    "semanticsSha256": "ab0dca30d0411c6f5897652e044ef3ad732f5feba7c4852bdca111b2112f844f",
+    "baselineCommit": "2146278a95344cd2a8e22596b2f315b46edffc88"
+  },
+  "inputProfile": "COMPLETE_ELEVEN_AXIS_PASS_SNAPSHOT_WITH_EXPLICIT_OVERRIDES_V1",
+  "axisIds": [
+    "SOURCE",
+    "CONTRACT_UNIT",
+    "PR_CHECK",
+    "MERGE",
+    "ARTIFACT_SBOM",
+    "SIGNATURE_RELEASE",
+    "DEPLOYMENT",
+    "RUNTIME",
+    "SECURITY",
+    "ASSURANCE",
+    "TENANT_ACCEPTANCE"
+  ],
+  "installationColumns": [
+    "ABSENT",
+    "PENDING",
+    "PREFLIGHT",
+    "VERIFYING",
+    "APPLYING",
+    "HEALTH_CHECKING",
+    "READY",
+    "BLOCKED",
+    "DEGRADED",
+    "FAILED",
+    "UPGRADING",
+    "ROLLING_BACK",
+    "UNINSTALLING",
+    "REMOVED",
+    "RETIRED",
+    "REVOKED"
+  ],
+  "selectionInstallationExpected": {
+    "NOT_SELECTED": [
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY"
+    ],
+    "PROPOSED": [
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY",
+      "EMPTY"
+    ],
+    "SELECTED": [
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "READY",
+      "BLOCKED",
+      "DEGRADED",
+      "FAILED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "REVOKED"
+    ],
+    "BLOCKED": [
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "FAILED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "BLOCKED",
+      "REVOKED"
+    ]
+  },
+  "freshnessExpected": {
+    "CURRENT": {
+      "EMPTY": "EMPTY",
+      "READY": "READY",
+      "DEGRADED": "DEGRADED",
+      "BLOCKED": "BLOCKED",
+      "FAILED": "FAILED",
+      "REVOKED": "REVOKED"
+    },
+    "STALE": {
+      "EMPTY": "EMPTY",
+      "READY": "BLOCKED",
+      "DEGRADED": "BLOCKED",
+      "BLOCKED": "BLOCKED",
+      "FAILED": "FAILED",
+      "REVOKED": "REVOKED"
+    },
+    "SOURCE_UNAVAILABLE": {
+      "EMPTY": "EMPTY",
+      "READY": "BLOCKED",
+      "DEGRADED": "BLOCKED",
+      "BLOCKED": "BLOCKED",
+      "FAILED": "FAILED",
+      "REVOKED": "REVOKED"
+    }
+  },
+  "evidenceExpected": [
+    {
+      "state": "NOT_APPLICABLE",
+      "required": "READY",
+      "optional": "READY"
+    },
+    {
+      "state": "MISSING",
+      "required": "BLOCKED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "COLLECTING",
+      "required": "BLOCKED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "PASS",
+      "required": "READY",
+      "optional": "READY"
+    },
+    {
+      "state": "WARN",
+      "required": "DEGRADED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "FAIL",
+      "required": "FAILED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "STALE",
+      "required": "BLOCKED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "WAIVED",
+      "required": "DEGRADED",
+      "optional": "DEGRADED"
+    },
+    {
+      "state": "NOT_RUN_ENV_UNAVAILABLE",
+      "required": "BLOCKED",
+      "optional": "DEGRADED"
+    }
+  ],
+  "waiverUnderlyingStates": [
+    "MISSING",
+    "COLLECTING",
+    "WARN",
+    "FAIL",
+    "STALE",
+    "NOT_RUN_ENV_UNAVAILABLE"
+  ],
+  "waiverExpected": "DEGRADED",
+  "scenarios": [
+    {
+      "id": "blocked-selection-degraded-installation",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "BLOCKED",
+          "installationState": "DEGRADED"
+        }
+      ],
+      "expected": {
+        "aggregateState": "BLOCKED",
+        "selectedCount": 1,
+        "contributingHarnessIds": [
+          "runtime.infrastructure"
+        ],
+        "selectionCounts": {
+          "BLOCKED": 1
+        },
+        "installationCounts": {
+          "DEGRADED": 1
+        },
+        "worstInstallationState": "DEGRADED"
+      }
+    },
+    {
+      "id": "blocked-selection-required-failure-wins",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "BLOCKED",
+          "installationState": "DEGRADED",
+          "axisOverrides": {
+            "SOURCE": {
+              "state": "FAIL",
+              "required": true
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "FAILED"
+      }
+    },
+    {
+      "id": "revocation-wins-over-failure-and-stale",
+      "freshnessState": "STALE",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "BLOCKED",
+          "installationState": "REVOKED",
+          "axisOverrides": {
+            "SOURCE": {
+              "state": "FAIL",
+              "required": true
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "REVOKED"
+      }
+    },
+    {
+      "id": "failed-installation-wins-over-source-outage",
+      "freshnessState": "SOURCE_UNAVAILABLE",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "BLOCKED",
+          "installationState": "FAILED"
+        }
+      ],
+      "expected": {
+        "aggregateState": "FAILED"
+      }
+    },
+    {
+      "id": "waiver-does-not-unblock-selection",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "BLOCKED",
+          "installationState": "READY",
+          "axisOverrides": {
+            "SECURITY": {
+              "state": "WAIVED",
+              "required": true,
+              "underlyingState": "FAIL"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "BLOCKED"
+      }
+    },
+    {
+      "id": "optional-failure-does-not-mask-required-missing",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "READY",
+          "axisOverrides": {
+            "RUNTIME": {
+              "state": "FAIL",
+              "required": false
+            },
+            "SOURCE": {
+              "state": "MISSING",
+              "required": true
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "BLOCKED"
+      }
+    },
+    {
+      "id": "waiver-does-not-mask-other-required-failure",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "READY",
+          "axisOverrides": {
+            "RUNTIME": {
+              "state": "FAIL",
+              "required": true
+            },
+            "SECURITY": {
+              "state": "WAIVED",
+              "required": true,
+              "underlyingState": "FAIL"
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "FAILED"
+      }
+    },
+    {
+      "id": "optional-warning-does-not-mask-revocation",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "REVOKED",
+          "axisOverrides": {
+            "SOURCE": {
+              "state": "WARN",
+              "required": false
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "REVOKED"
+      }
+    },
+    {
+      "id": "empty-snapshot-source-unavailable",
+      "freshnessState": "SOURCE_UNAVAILABLE",
+      "harnesses": [],
+      "expected": {
+        "aggregateState": "EMPTY",
+        "selectedCount": 0,
+        "contributingHarnessIds": [],
+        "selectionCounts": {},
+        "installationCounts": {},
+        "worstInstallationState": null
+      }
+    },
+    {
+      "id": "non-contributing-failures-remain-visible-in-counts",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "READY"
+        },
+        {
+          "harnessId": "runtime.model-inference",
+          "selectionState": "NOT_SELECTED",
+          "installationState": "REVOKED",
+          "axisOverrides": {
+            "SOURCE": {
+              "state": "FAIL",
+              "required": true
+            }
+          }
+        },
+        {
+          "harnessId": "runtime.experience",
+          "selectionState": "PROPOSED",
+          "installationState": "FAILED"
+        }
+      ],
+      "expected": {
+        "aggregateState": "READY",
+        "selectedCount": 1,
+        "contributingHarnessIds": [],
+        "selectionCounts": {
+          "NOT_SELECTED": 1,
+          "PROPOSED": 1,
+          "SELECTED": 1
+        },
+        "installationCounts": {
+          "READY": 1
+        },
+        "worstInstallationState": "READY"
+      }
+    },
+    {
+      "id": "worst-installation-is-not-aggregate-state",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "READY",
+          "axisOverrides": {
+            "SOURCE": {
+              "state": "FAIL",
+              "required": true
+            }
+          }
+        }
+      ],
+      "expected": {
+        "aggregateState": "FAILED",
+        "worstInstallationState": "READY"
+      }
+    },
+    {
+      "id": "multi-harness-precedence-and-lexical-contributors",
+      "freshnessState": "CURRENT",
+      "harnesses": [
+        {
+          "harnessId": "runtime.infrastructure",
+          "selectionState": "SELECTED",
+          "installationState": "READY"
+        },
+        {
+          "harnessId": "knowledge.domain-semantic",
+          "selectionState": "SELECTED",
+          "installationState": "DEGRADED"
+        },
+        {
+          "harnessId": "execution.orchestration",
+          "selectionState": "SELECTED",
+          "installationState": "FAILED"
+        },
+        {
+          "harnessId": "trust.security-safety",
+          "selectionState": "NOT_SELECTED",
+          "installationState": "REVOKED"
+        }
+      ],
+      "expected": {
+        "aggregateState": "FAILED",
+        "selectedCount": 3,
+        "contributingHarnessIds": [
+          "execution.orchestration",
+          "knowledge.domain-semantic"
+        ],
+        "selectionCounts": {
+          "NOT_SELECTED": 1,
+          "SELECTED": 3
+        },
+        "installationCounts": {
+          "DEGRADED": 1,
+          "FAILED": 1,
+          "READY": 1
+        },
+        "worstInstallationState": "FAILED"
+      }
+    }
+  ]
+}
