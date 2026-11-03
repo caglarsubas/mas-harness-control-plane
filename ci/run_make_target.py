@@ -155,7 +155,7 @@ def dispatch(target: str, supplied: Mapping[str, str], directory: Path) -> int:
     for rule in matches:
         for command in rule.render(supplied):
             print(f"make-handler packet={rule.packet_id} argv={json.dumps(command, separators=(',', ':'))}", flush=True)
-            completed = subprocess.run(command, shell=False, check=False)
+            completed = subprocess.run(command, shell=False, check=False, env={**os.environ, "NEXT_TELEMETRY_DISABLED": "1"})
             if completed.returncode:
                 return completed.returncode
     return 0

@@ -1,0 +1,15 @@
+{
+  "packetId": "CTRL-TRANSPORT-001",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["python3", "-B", "-m", "unittest", "tests/bootstrap/test_node_closure.py"],
+        ["python3", "-B", "-m", "unittest", "tests/bootstrap/test_no_workflow.py"],
+        ["python3", "-B", "-m", "unittest", "tests/bootstrap/test_dispatch_child_env.py"]
+      ],
+      "name": "transport-bootstrap"
+    }
+  ]
+}
