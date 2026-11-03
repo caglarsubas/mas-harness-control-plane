@@ -9,11 +9,6 @@ import re
 import sys
 from pathlib import Path
 
-FORBIDDEN_WORKFLOW = (
-    "ubuntu-latest", "macos-latest", "windows-latest", "upload-artifact",
-    "download-artifact", "actions/cache", "docker://", "schedule:", "push:",
-    "packages: write",
-)
 FORBIDDEN_KINDS = (
     "kind: Secret", "kind: Namespace", "kind: PersistentVolume",
     "kind: PersistentVolumeClaim", "kind: Route", "kind: Ingress",
@@ -40,18 +35,9 @@ def main() -> None:
                 if (Path(current) / name).is_symlink():
                     refuse(f"linked first-party source is forbidden: {(Path(current) / name).relative_to(root)}")
 
-    workflow = (root / ".github/workflows/verify.yml").read_text(encoding="utf-8")
-    if any(token in workflow for token in FORBIDDEN_WORKFLOW):
-        refuse("workflow contains a hosted, retained, scheduled, package, or container feature")
-    required_workflow = (
-        "pull_request:", "workflow_dispatch:", "permissions:\n  contents: read",
-        "runs-on: [self-hosted, harness-engineering, ephemeral, credential-free]",
-        "timeout-minutes: 15", "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
-        "persist-credentials: false", "fetch-depth: 0",
-        "run: /opt/planeon/bin/harness-offline-launch",
-    )
-    if any(token not in workflow for token in required_workflow) or workflow.count("uses:") != 1 or workflow.count("run:") != 1:
-        refuse("workflow is outside the pinned two-step credential-free contract")
+    workflows = root / ".github/workflows"
+    if workflows.is_symlink() or (workflows.exists() and (not workflows.is_dir() or any(workflows.rglob("*")))):
+        refuse("hosted workflow files are forbidden; verification runs only on the owner-operated offline verifier")
 
     package = json.loads((root / "package.json").read_text(encoding="utf-8"))
     forbidden_packages = ("@vercel/", "stripe", "auth0", "firebase", "openai", "anthropic", "sentry")
