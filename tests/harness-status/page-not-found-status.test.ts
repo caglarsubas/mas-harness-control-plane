@@ -79,12 +79,12 @@ describe("page destinations decide not-found before any loading boundary streams
   it("refuses the false-pass shapes of a text-order check", () => {
     const resolver = "resolveHarnessProjection(";
     const commented = "export default async function Page() {\n  // resolveHarnessProjection(id); notFound();\n  return <Early />;\n}\n";
-    const ternary = "export default async function Page() {\n  return ok ? <Early /> : null;\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n}\n";
+    const blockCommented = "export default async function Page() {\n  /* const projection = resolveHarnessProjection(id); if (!projection) notFound(); */\n  return <Early />;\n}\n";
+    const ternary = "export default async function Page() {\n  return ok ? <Early /> : null;\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Late />;\n}\n";
     const element = "export default async function Page() {\n  return element;\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Late />;\n}\n";
+    const created = "export default async function Page() {\n  return createElement(Early, null);\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Late />;\n}\n";
     const correct = "/* return <Comment /> */\nfunction Helper() { return <Helper />; }\nexport default async function Page() {\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Suspense><Detail /></Suspense>;\n}\n";
-    expect(renderOrderErrors(commented, resolver)).not.toEqual([]);
-    expect(renderOrderErrors(ternary, resolver)).not.toEqual([]);
-    expect(renderOrderErrors(element, resolver)).not.toEqual([]);
+    for (const refused of [commented, blockCommented, ternary, element, created]) expect(renderOrderErrors(refused, resolver)).not.toEqual([]);
     expect(renderOrderErrors(correct, resolver)).toEqual([]);
   });
 });
@@ -102,6 +102,6 @@ function renderOrderErrors(source: string, resolver: string): string[] {
   if (resolved < 0) errors.push("no resolver call");
   if (missing < 0 || missing < resolved) errors.push("notFound() does not follow the resolver call");
   if (returned < 0 || returned < missing) errors.push("a return precedes notFound()");
-  else if (!/^return\b[^;]*</u.test(body.slice(returned))) errors.push("the first return carries no JSX");
+  else if (!/^return\s*\(?\s*</u.test(body.slice(returned))) errors.push("the first return carries no JSX");
   return errors;
 }
