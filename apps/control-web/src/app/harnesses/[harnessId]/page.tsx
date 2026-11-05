@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { HarnessDetailPage } from "../../../components/harness-overview/DetailPages";
-import { createFixtureProjectionSet } from "../../../lib/harness-status/fixtures";
-import { harnessDefinition } from "../../../lib/harness-status/taxonomy";
+import { StatusLoading } from "../../../components/harness-overview/StatusBoundary";
+import { resolveHarnessProjection } from "../../../lib/harness-status/page-resolution";
 
 export default async function HarnessPage({ params }: { readonly params: Promise<{ readonly harnessId: string }> }) {
   const { harnessId } = await params;
-  if (!harnessDefinition(harnessId)) notFound();
-  const projection = createFixtureProjectionSet().harnesses.find((item) => item.spec.harnessId === harnessId);
+  const projection = resolveHarnessProjection(harnessId);
   if (!projection) notFound();
-  return <HarnessDetailPage projection={projection} />;
+  return <Suspense fallback={<StatusLoading label="Loading the harness projection" />}><HarnessDetailPage projection={projection} /></Suspense>;
 }

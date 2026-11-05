@@ -82,6 +82,8 @@ Browser destinations are `/overview`, `/planes/[planeId]`,
 `/organizations/[organizationId]`. The onion is progressive enhancement: native
 plane/harness links and the adjacent semantic list are authoritative navigation.
 At compact widths the onion disappears and the complete list remains.
+An unknown or unauthorized page destination renders the not-found view with HTTP
+404, decided before any loading boundary streams.
 
 ## Projection ingestion
 
