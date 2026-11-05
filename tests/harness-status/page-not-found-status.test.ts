@@ -70,15 +70,38 @@ describe("page destinations decide not-found before any loading boundary streams
     }
   });
 
-  it("resolves the id and calls notFound() before the first JSX return on each dynamic page", () => {
+  it("resolves the id and calls notFound() before the first return on each dynamic page", () => {
     for (const [page, resolver] of Object.entries(DYNAMIC_PAGES)) {
-      const source = readFileSync(join(APP_ROOT, page), "utf8");
-      const resolved = source.indexOf(resolver);
-      const missing = source.search(NOT_FOUND_CALL);
-      const rendered = source.search(/return\s*\(?\s*</u);
-      expect(resolved, page).toBeGreaterThan(-1);
-      expect(missing, page).toBeGreaterThan(resolved);
-      expect(rendered, page).toBeGreaterThan(missing);
+      expect(renderOrderErrors(readFileSync(join(APP_ROOT, page), "utf8"), resolver), page).toEqual([]);
     }
   });
+
+  it("refuses the false-pass shapes of a text-order check", () => {
+    const resolver = "resolveHarnessProjection(";
+    const commented = "export default async function Page() {\n  // resolveHarnessProjection(id); notFound();\n  return <Early />;\n}\n";
+    const ternary = "export default async function Page() {\n  return ok ? <Early /> : null;\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n}\n";
+    const element = "export default async function Page() {\n  return element;\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Late />;\n}\n";
+    const correct = "/* return <Comment /> */\nfunction Helper() { return <Helper />; }\nexport default async function Page() {\n  const projection = resolveHarnessProjection(id);\n  if (!projection) notFound();\n  return <Suspense><Detail /></Suspense>;\n}\n";
+    expect(renderOrderErrors(commented, resolver)).not.toEqual([]);
+    expect(renderOrderErrors(ternary, resolver)).not.toEqual([]);
+    expect(renderOrderErrors(element, resolver)).not.toEqual([]);
+    expect(renderOrderErrors(correct, resolver)).toEqual([]);
+  });
 });
+
+// Order inside the default export, comments removed: resolver call, then notFound(), then the first return, which must carry JSX.
+function renderOrderErrors(source: string, resolver: string): string[] {
+  const code = source.replace(/\/\*[\s\S]*?\*\//gu, "").replace(/(^|[^:])\/\/.*$/gmu, "$1");
+  const start = code.indexOf("export default");
+  if (start < 0) return ["no default export"];
+  const body = code.slice(start);
+  const resolved = body.indexOf(resolver);
+  const missing = body.search(NOT_FOUND_CALL);
+  const returned = body.search(/\breturn\b/u);
+  const errors: string[] = [];
+  if (resolved < 0) errors.push("no resolver call");
+  if (missing < 0 || missing < resolved) errors.push("notFound() does not follow the resolver call");
+  if (returned < 0 || returned < missing) errors.push("a return precedes notFound()");
+  else if (!/^return\b[^;]*</u.test(body.slice(returned))) errors.push("the first return carries no JSX");
+  return errors;
+}
