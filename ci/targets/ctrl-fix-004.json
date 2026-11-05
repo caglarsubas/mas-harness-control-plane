@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "packetId": "CTRL-FIX-004",
+  "targets": [
+    {
+      "name": "ctrl-fix-004-page-status",
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["npm", "run", "typecheck"],
+        ["node_modules/.bin/vitest", "run", "tests/harness-status/page-not-found-status.test.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ]
+    },
+    {
+      "name": "ctrl-fix-004-page-resolver",
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["node_modules/.bin/vitest", "run", "tests/harness-status/page-resolver.test.ts", "--pool=forks", "--sequence.concurrent=false"]
+      ]
+    }
+  ]
+}

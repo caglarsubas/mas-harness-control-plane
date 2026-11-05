@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { PlaneDetailPage } from "../../../components/harness-overview/DetailPages";
-import { createFixtureProjectionSet } from "../../../lib/harness-status/fixtures";
-import { planeDefinition } from "../../../lib/harness-status/taxonomy";
+import { StatusLoading } from "../../../components/harness-overview/StatusBoundary";
+import { resolvePlaneProjection } from "../../../lib/harness-status/page-resolution";
 
 export default async function PlanePage({ params }: { readonly params: Promise<{ readonly planeId: string }> }) {
   const { planeId } = await params;
-  if (!planeDefinition(planeId)) notFound();
-  const projection = createFixtureProjectionSet().planes.find((item) => item.spec.planeId === planeId);
+  const projection = resolvePlaneProjection(planeId);
   if (!projection) notFound();
-  return <PlaneDetailPage projection={projection} />;
+  return <Suspense fallback={<StatusLoading label="Loading the plane projection" />}><PlaneDetailPage projection={projection} /></Suspense>;
 }
