@@ -1,0 +1,13 @@
+{
+  "packetId": "CTRL-TRANSPORT-002",
+  "schemaVersion": "harness.planeon.ai/make-target-descriptor/v1alpha1",
+  "targets": [
+    {
+      "acceptedVariables": {},
+      "argvTemplate": [
+        ["python3", "-B", "-m", "unittest", "tests/bootstrap/test_packet_raw_digest.py"]
+      ],
+      "name": "transport-raw-digest"
+    }
+  ]
+}
